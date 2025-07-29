@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KotakEngine</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #111;
+      color: #fff;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background: #111;
+    }
+
+    .brand {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-right: 30px;
+      white-space: nowrap;
+    }
+
+    input {
+      flex-grow: 1;
+      padding: 0.8rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+    }
+
+    iframe {
+      width: 100%;
+      height: calc(100vh - 80px);
+      border: none;
+    }
+
+    .chatbox {
+      white-space: pre-wrap;
+      background: #222;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">KotakEngine</div>
+    <input type="text" id="search" placeholder="Zadej dotaz nebo URL..." />
+  </div>
+
+  <div id="result"></div>
+  <iframe id="webview" style="display: none;"></iframe>
+
+  <script>
+    const searchInput = document.getElementById("search");
+    const resultDiv = document.getElementById("result");
+    const iframe = document.getElementById("webview");
+
+    searchInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        const input = searchInput.value.trim();
+        if (input.startsWith("http")) {
+          iframe.src = input;
+          iframe.style.display = "block";
+          resultDiv.innerHTML = "";
+        } else {
+          iframe.style.display = "none";
+          resultDiv.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z KotakEngine...</p>";
+          try {
+            const res = await fetch("/api/ask", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: input })
+            });
+            const data = await res.json();
+            resultDiv.innerHTML = `<div class="chatbox">${data.answer}</div>`;
+          } catch (err) {
+            resultDiv.innerHTML = `<div class="chatbox">⚠️ Chyba při dotazu na AI</div>`;
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
