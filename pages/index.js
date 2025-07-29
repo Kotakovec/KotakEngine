@@ -1,70 +1,82 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 export default function Home() {
-  const [input, setInput] = useState('');
-  const [chat, setChat] = useState([]);
+  const [input, setInput] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [iframeSrc, setIframeSrc] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function sendMessage() {
-    if (!input.trim()) return;
+  const isLikelyDomain = (text) => /^[\w.-]+\.[a-z]{2,}$/.test(text);
 
-    const userMessage = { role: 'user', content: input };
-    setChat([...chat, userMessage]);
-    setLoading(true);
-    setInput('');
+  const handleSearch = async (e) => {
+    if (e.key === "Enter") {
+      setAnswer("");
+      setIframeSrc("");
+      setLoading(true);
 
-    try {
-      const res = await fetch('/api/openrouter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: input }),
-      });
-      const data = await res.json();
+      let query = input.trim();
 
-      if (res.ok) {
-        setChat(prev => [...prev, { role: 'ai', content: data.message }]);
-      } else {
-        setChat(prev => [...prev, { role: 'ai', content: `Error: ${data.error}` }]);
+      if (query.startsWith("http://") || query.startsWith("https://")) {
+        setIframeSrc(query);
+        setLoading(false);
+        return;
       }
-    } catch (e) {
-      setChat(prev => [...prev, { role: 'ai', content: 'Error: Unable to reach API' }]);
-    }
 
-    setLoading(false);
-  }
+      if (isLikelyDomain(query)) {
+        setIframeSrc("https://" + query);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: query })
+        });
+        const data = await res.json();
+        setAnswer(data.answer || "❌ AI neodpověděla.");
+      } catch (err) {
+        setAnswer("⚠️ Chyba při dotazu na AI");
+      }
+
+      setLoading(false);
+    }
+  };
 
   return (
-    <div style={{ maxWidth: 600, margin: 'auto', padding: 20, fontFamily: 'Arial, sans-serif' }}>
-      <h1>AI Chat</h1>
-
-      <div style={{
-        border: '1px solid #ddd',
-        padding: 10,
-        height: 400,
-        overflowY: 'auto',
-        marginBottom: 10,
-        backgroundColor: '#fafafa',
-      }}>
-        {chat.map((msg, i) => (
-          <div key={i} style={{ margin: '10px 0', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
-            <b>{msg.role === 'user' ? 'You' : 'AI'}:</b> {msg.content}
-          </div>
-        ))}
-        {loading && <div>AI is typing...</div>}
+    <div style={{ background: "#111", color: "#fff", minHeight: "100vh", margin: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", padding: "1rem", gap: "10px" }}>
+        <img src="/logo.png" alt="Logo" style={{ height: "40px" }} />
+        <h1 style={{ margin: 0, fontSize: "1.5rem" }}>KotakEngine</h1>
+        <input
+          style={{
+            marginLeft: "30px",
+            flexGrow: 1,
+            padding: "0.8rem",
+            borderRadius: "8px",
+            border: "none"
+          }}
+          type="text"
+          placeholder="Zadej dotaz nebo web (např. frcreator.eu)"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleSearch}
+        />
       </div>
 
-      <input
-        type="text"
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
-        placeholder="Type your message"
-        style={{ width: '100%', padding: 10, fontSize: 16 }}
-        disabled={loading}
-      />
-      <button onClick={sendMessage} disabled={loading || !input.trim()} style={{ marginTop: 10, padding: '10px 20px' }}>
-        Send
-      </button>
+      {loading && <p style={{ margin: "1rem" }}>⏳ Načítání...</p>}
+      {answer && (
+        <div style={{ background: "#222", margin: "1rem", padding: "1rem", borderRadius: "8px" }}>
+          {answer}
+        </div>
+      )}
+      {iframeSrc && (
+        <iframe
+          src={iframeSrc}
+          style={{ width: "100%", height: "80vh", border: "none" }}
+        />
+      )}
     </div>
   );
 }
