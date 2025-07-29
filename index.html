@@ -3,33 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KotakEngine AI</title>
+  <title>KotakEngine Beta</title>
   <style>
     body {
       font-family: sans-serif;
+      margin: 0;
+      padding: 0;
       background: #111;
       color: #fff;
-      margin: 0;
     }
+
     .topbar {
       display: flex;
       align-items: center;
       padding: 1rem;
       background: #111;
     }
+
     .brand {
       display: flex;
       align-items: center;
-      font-size: 1.8rem;
+      font-size: 2rem;
       font-weight: bold;
-      color: white;
       margin-right: 15px;
+      white-space: nowrap;
       gap: 10px;
     }
+
     .brand img {
       height: 40px;
+      width: auto;
       user-select: none;
     }
+
     input {
       flex-grow: 1;
       padding: 0.8rem;
@@ -37,6 +43,13 @@
       border-radius: 8px;
       border: none;
     }
+
+    iframe {
+      width: 100%;
+      height: calc(100vh - 80px);
+      border: none;
+    }
+
     .chatbox {
       white-space: pre-wrap;
       background: #222;
@@ -49,50 +62,65 @@
 <body>
   <div class="topbar">
     <div class="brand">
-      <img src="logo.png" alt="Logo" />
-      KotakEngine
+      <img src="logo.png" alt="KotakEngine Logo" />
+      KotakEngine Beta
     </div>
-    <input type="text" id="search" placeholder="Zeptej se na cokoliv..." />
+    <input type="text" id="search" placeholder="Zadej dotaz nebo URL..." />
   </div>
 
   <div id="result"></div>
+  <iframe id="webview" style="display: none;"></iframe>
 
   <script>
-    const input = document.getElementById("search");
-    const result = document.getElementById("result");
+    const searchInput = document.getElementById("search");
+    const resultDiv = document.getElementById("result");
+    const iframe = document.getElementById("webview");
 
-    // ⚠️ Vlož svůj OpenRouter klíč sem (jen pro testy – NIKDY veřejně!)
-    const API_KEY = "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";
+    const API_KEY = "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"; // <<< SEM VLOŽ SVŮJ KLÍČ
 
-    input.addEventListener("keydown", async (e) => {
+    function isLikelyDomain(text) {
+      return /^[\w.-]+\.[a-z]{2,}$/i.test(text);
+    }
+
+    searchInput.addEventListener("keydown", async (e) => {
       if (e.key === "Enter") {
-        const prompt = input.value.trim();
-        if (!prompt) return;
+        let input = searchInput.value.trim();
 
-        result.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z AI...</p>";
+        // URL dotaz
+        if (input.startsWith("http://") || input.startsWith("https://") || isLikelyDomain(input)) {
+          if (!input.startsWith("http")) input = "https://" + input;
+          iframe.src = input;
+          iframe.style.display = "block";
+          resultDiv.innerHTML = "";
+          return;
+        }
 
+        // AI dotaz
+        iframe.style.display = "none";
+        resultDiv.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z KotakEngine AI...</p>";
         try {
           const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${API_KEY}`,
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
-              model: "mistral/mistral-7b-instruct",
+              model: "openai/gpt-3.5-turbo",
               messages: [
-                { role: "system", content: "Odpovídej jako chytrý český vyhledávač, přidávej odkazy, pokud jsou relevantní." },
-                { role: "user", content: prompt }
+                { role: "system", content: "Jsi chytrý český vyhledávač KotakEngine. Pokud dotaz souvisí s webem, přidej i odkaz. Odpovídej přátelsky a stručně." },
+                { role: "user", content: input }
               ]
             })
           });
 
+          if (!res.ok) throw new Error("Chyba API");
+
           const data = await res.json();
-          const answer = data.choices?.[0]?.message?.content || "⚠️ Odpověď se nepodařilo načíst.";
-          result.innerHTML = `<div class="chatbox">${answer}</div>`;
+          const answer = data.choices?.[0]?.message?.content || "❌ Odpověď nebyla nalezena.";
+          resultDiv.innerHTML = `<div class="chatbox">${answer}</div>`;
         } catch (err) {
-          console.error(err);
-          result.innerHTML = "<div class='chatbox'>⚠️ Chyba při volání API</div>";
+          resultDiv.innerHTML = `<div class="chatbox">⚠️ Chyba při dotazu na AI</div>`;
         }
       }
     });
