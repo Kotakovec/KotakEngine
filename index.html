@@ -64,27 +64,45 @@
     const resultDiv = document.getElementById("result");
     const iframe = document.getElementById("webview");
 
+    function isLikelyDomain(text) {
+      // Pokud text vypadá jako doména, např. frcreator.eu nebo youtube.com
+      return /^[\w.-]+\.[a-z]{2,}$/i.test(text);
+    }
+
     searchInput.addEventListener("keydown", async (e) => {
       if (e.key === "Enter") {
-        const input = searchInput.value.trim();
-        if (input.startsWith("http")) {
+        let input = searchInput.value.trim();
+
+        // Pokud začíná na http nebo https, použij jak je
+        if (input.startsWith("http://") || input.startsWith("https://")) {
           iframe.src = input;
           iframe.style.display = "block";
           resultDiv.innerHTML = "";
-        } else {
-          iframe.style.display = "none";
-          resultDiv.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z KotakEngine...</p>";
-          try {
-            const res = await fetch("/api/ask", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ prompt: input })
-            });
-            const data = await res.json();
-            resultDiv.innerHTML = `<div class="chatbox">${data.answer}</div>`;
-          } catch (err) {
-            resultDiv.innerHTML = `<div class="chatbox">⚠️ Chyba při dotazu na AI</div>`;
-          }
+          return;
+        }
+
+        // Pokud to vypadá jako doména, přidej https://
+        if (isLikelyDomain(input)) {
+          input = "https://" + input;
+          iframe.src = input;
+          iframe.style.display = "block";
+          resultDiv.innerHTML = "";
+          return;
+        }
+
+        // Jinak to pošli jako AI dotaz
+        iframe.style.display = "none";
+        resultDiv.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z KotakEngine...</p>";
+        try {
+          const res = await fetch("/api/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: input })
+          });
+          const data = await res.json();
+          resultDiv.innerHTML = `<div class="chatbox">${data.answer}</div>`;
+        } catch (err) {
+          resultDiv.innerHTML = `<div class="chatbox">⚠️ Chyba při dotazu na AI</div>`;
         }
       }
     });
