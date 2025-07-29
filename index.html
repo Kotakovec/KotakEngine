@@ -21,10 +21,19 @@
     }
 
     .brand {
+      display: flex;
+      align-items: center;
       font-size: 1.5rem;
       font-weight: bold;
-      margin-right: 20px;
+      margin-right: 30px;
       white-space: nowrap;
+      gap: 10px; /* mezera mezi logem a textem */
+    }
+
+    .brand img {
+      height: 32px; /* velikost loga */
+      width: auto;
+      user-select: none;
     }
 
     input {
@@ -52,7 +61,10 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="brand">KotakEngine</div>
+    <div class="brand">
+      <img src="logo.png" alt="KotakEngine Logo" />
+      KotakEngine
+    </div>
     <input type="text" id="search" placeholder="Zadej dotaz nebo URL..." />
   </div>
 
@@ -65,7 +77,6 @@
     const iframe = document.getElementById("webview");
 
     function isLikelyDomain(text) {
-      // Pokud text vypadá jako doména, např. frcreator.eu nebo youtube.com
       return /^[\w.-]+\.[a-z]{2,}$/i.test(text);
     }
 
@@ -73,7 +84,6 @@
       if (e.key === "Enter") {
         let input = searchInput.value.trim();
 
-        // Pokud začíná na http nebo https, použij jak je
         if (input.startsWith("http://") || input.startsWith("https://")) {
           iframe.src = input;
           iframe.style.display = "block";
@@ -81,7 +91,6 @@
           return;
         }
 
-        // Pokud to vypadá jako doména, přidej https://
         if (isLikelyDomain(input)) {
           input = "https://" + input;
           iframe.src = input;
@@ -90,7 +99,6 @@
           return;
         }
 
-        // Jinak to pošli jako AI dotaz
         iframe.style.display = "none";
         resultDiv.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z KotakEngine...</p>";
         try {
