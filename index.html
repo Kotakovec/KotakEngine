@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KotakEngine Beta</title>
   <style>
     body {
@@ -12,14 +12,12 @@
       background: #111;
       color: #fff;
     }
-
     .topbar {
       display: flex;
       align-items: center;
       padding: 1rem;
       background: #111;
     }
-
     .brand {
       display: flex;
       align-items: center;
@@ -29,40 +27,40 @@
       white-space: nowrap;
       gap: 10px;
     }
-
     .brand img {
       height: 40px;
       width: auto;
       user-select: none;
     }
-
     input {
       flex-grow: 1;
       padding: 0.8rem;
       font-size: 1rem;
       border-radius: 8px;
       border: none;
+      background: #222;
+      color: #fff;
     }
-
     iframe {
       width: 100%;
       height: calc(100vh - 80px);
       border: none;
     }
-
     .chatbox {
       white-space: pre-wrap;
       background: #222;
       padding: 1rem;
       border-radius: 8px;
       margin: 1rem;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
   <div class="topbar">
     <div class="brand">
-      <img src="logo.png" alt="KotakEngine Logo" />
+      <img src="logo.png" alt="logo" />
       KotakEngine Beta
     </div>
     <input type="text" id="search" placeholder="Zadej dotaz nebo URL..." />
@@ -76,8 +74,6 @@
     const resultDiv = document.getElementById("result");
     const iframe = document.getElementById("webview");
 
-    const API_KEY = "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"; // <<< SEM VLOŽ SVŮJ KLÍČ
-
     function isLikelyDomain(text) {
       return /^[\w.-]+\.[a-z]{2,}$/i.test(text);
     }
@@ -86,39 +82,31 @@
       if (e.key === "Enter") {
         let input = searchInput.value.trim();
 
-        // URL dotaz
-        if (input.startsWith("http://") || input.startsWith("https://") || isLikelyDomain(input)) {
-          if (!input.startsWith("http")) input = "https://" + input;
+        if (input.startsWith("http://") || input.startsWith("https://")) {
           iframe.src = input;
           iframe.style.display = "block";
           resultDiv.innerHTML = "";
           return;
         }
 
-        // AI dotaz
+        if (isLikelyDomain(input)) {
+          input = "https://" + input;
+          iframe.src = input;
+          iframe.style.display = "block";
+          resultDiv.innerHTML = "";
+          return;
+        }
+
         iframe.style.display = "none";
-        resultDiv.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z KotakEngine AI...</p>";
+        resultDiv.innerHTML = "<p style='margin:1rem;'>Načítám odpověď z KotakEngine...</p>";
         try {
-          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          const res = await fetch("/api/ask", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${API_KEY}`
-            },
-            body: JSON.stringify({
-              model: "openai/gpt-3.5-turbo",
-              messages: [
-                { role: "system", content: "Jsi chytrý český vyhledávač KotakEngine. Pokud dotaz souvisí s webem, přidej i odkaz. Odpovídej přátelsky a stručně." },
-                { role: "user", content: input }
-              ]
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: input })
           });
-
-          if (!res.ok) throw new Error("Chyba API");
-
           const data = await res.json();
-          const answer = data.choices?.[0]?.message?.content || "❌ Odpověď nebyla nalezena.";
-          resultDiv.innerHTML = `<div class="chatbox">${answer}</div>`;
+          resultDiv.innerHTML = `<div class="chatbox">${data.answer}</div>`;
         } catch (err) {
           resultDiv.innerHTML = `<div class="chatbox">⚠️ Chyba při dotazu na AI</div>`;
         }
