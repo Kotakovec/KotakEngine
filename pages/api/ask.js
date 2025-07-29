@@ -9,18 +9,22 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mistral/mistral-7b-instruct",
-        messages: [
-          { role: "user", content: prompt }
-        ]
+        model: "mistralai/mistral-7b-instruct", // ✅ pozor na název modelu
+        messages: [{ role: "user", content: prompt }]
       })
     });
 
     const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content || "⚠️ Odpověď nebyla nalezena.";
-    res.status(200).json({ answer });
+
+    if (!data.choices || !data.choices[0]) {
+      throw new Error("Žádná odpověď od AI.");
+    }
+
+    const reply = data.choices[0].message.content;
+
+    res.status(200).json({ answer: reply });
   } catch (error) {
-    console.error("Chyba při volání OpenRouter API:", error);
+    console.error("Chyba API:", error);
     res.status(500).json({ answer: "⚠️ Chyba při dotazu na AI" });
   }
 }
