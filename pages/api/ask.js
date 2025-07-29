@@ -1,6 +1,10 @@
 export default async function handler(req, res) {
   const { prompt } = req.body;
 
+  if (!prompt) {
+    return res.status(400).json({ error: "Chybí dotaz." });
+  }
+
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -9,22 +13,20 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct", // ✅ pozor na název modelu
+        model: "mistralai/mistral-7b-instruct",
         messages: [{ role: "user", content: prompt }]
       })
     });
 
     const data = await response.json();
 
-    if (!data.choices || !data.choices[0]) {
-      throw new Error("Žádná odpověď od AI.");
+    if (data.choices && data.choices[0]?.message?.content) {
+      res.status(200).json({ answer: data.choices[0].message.content });
+    } else {
+      res.status(500).json({ error: "AI nedala odpověď." });
     }
-
-    const reply = data.choices[0].message.content;
-
-    res.status(200).json({ answer: reply });
-  } catch (error) {
-    console.error("Chyba API:", error);
-    res.status(500).json({ answer: "⚠️ Chyba při dotazu na AI" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Chyba při dotazu na AI." });
   }
 }
