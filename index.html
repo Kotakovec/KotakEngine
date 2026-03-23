@@ -2,73 +2,78 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KotakEngine</title>
     <style>
-        /* Celkový vzhled aplikace */
+        /* Základní nastavení pro mobil */
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0f0f0f;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0a0a0a;
             color: #ffffff;
-            overflow: hidden;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent; /* Odstraní modrý záblesk při kliknutí na mobilu */
         }
 
-        /* Kontejner pro hlavní menu */
+        /* Hlavní menu */
         #main-menu {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 50px;
-            height: 100vh;
-            overflow-y: auto;
+            padding: 40px 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 30px;
+            font-size: 2rem;
+            margin-bottom: 40px;
             color: #4caf50;
-            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            letter-spacing: 1px;
+            text-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
         }
 
+        /* Seznam karet pod sebou */
         .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 20px;
-            width: 90%;
-            max-width: 600px;
-        }
-
-        /* Karty jednotlivých aplikací */
-        .finta-card {
-            background: #1a1a1a;
-            aspect-ratio: 1 / 1;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-radius: 20px;
+            flex-direction: column; /* Karty pod sebou */
+            gap: 15px;
+            width: 100%;
+            max-width: 400px; /* Aby to na tabletech nebylo moc roztažené */
+        }
+
+        /* Styl karty */
+        .finta-card {
+            background: #161616;
+            display: flex;
+            align-items: center; /* Ikona a text vedle sebe */
+            padding: 20px;
+            border-radius: 18px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid #333;
-            text-align: center;
-            padding: 10px;
+            transition: transform 0.1s, background 0.2s;
+            border: 1px solid #222;
         }
 
-        .finta-card:hover {
-            transform: translateY(-5px);
-            background: #252525;
-            border-color: #4caf50;
+        .finta-card:active {
+            transform: scale(0.97); /* Efekt zmáčknutí při dotyku */
+            background: #202020;
         }
 
-        .finta-card i {
-            font-size: 40px;
-            margin-bottom: 10px;
+        .finta-card span {
+            font-size: 30px;
+            margin-right: 20px;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
         }
 
-        /* Iframe okno pro zobrazení file.html atd. */
+        .finta-card h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        /* Kontejner pro aplikace (Iframe) */
         #webview-container {
             display: none;
             position: fixed;
@@ -76,7 +81,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #121212;
+            background: #000;
             z-index: 100;
         }
 
@@ -86,30 +91,29 @@
             border: none;
         }
 
-        /* To tvoje kulaté tlačítko ZPĚT */
+        /* Kulaté tlačítko ZPĚT */
         #back-button {
             position: fixed;
-            top: 20px;
-            left: -70px; /* Schované vlevo */
-            width: 55px;
-            height: 55px;
+            top: 15px;
+            left: -70px;
+            width: 50px;
+            height: 50px;
             background-color: #4caf50;
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
             z-index: 999;
-            transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: none;
         }
 
         #back-button.visible {
-            left: 20px; /* Vyjede na scénu */
+            left: 15px;
         }
     </style>
 </head>
@@ -149,29 +153,23 @@
         const backButton = document.getElementById('back-button');
 
         function otevriAplikaci(stranka) {
-            // Načteme soubor (např. file.html) do iframe
             appFrame.src = stranka;
-            
-            // Přepneme viditelnost
             mainMenu.style.display = 'none';
             webviewContainer.style.display = 'block';
             
-            // Animace tlačítka zpět
+            // Tlačítko vyjede po malé pauze
             setTimeout(() => {
                 backButton.classList.add('visible');
-            }, 300);
+            }, 200);
         }
 
         function zpetDoMenu() {
-            // Schováme tlačítko
             backButton.classList.remove('visible');
-            
-            // Vrátíme se do menu
             setTimeout(() => {
                 webviewContainer.style.display = 'none';
                 mainMenu.style.display = 'flex';
-                appFrame.src = ""; // Stopneme načtenou stránku
-            }, 300);
+                appFrame.src = ""; 
+            }, 250);
         }
     </script>
 
