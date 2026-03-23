@@ -1,28 +1,31 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kotak Engine</title>
+    <title>Kotak Engine | File Transform</title>
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .card { background: #1e293b; padding: 25px; border-radius: 20px; width: 100%; max-width: 480px; border: 1px solid #334155; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); text-align: center; }
-        h1 { color: #3b82f6; margin-bottom: 5px; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #1e293b; padding: 25px; border-radius: 24px; width: 100%; max-width: 480px; border: 1px solid #334155; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); text-align: center; }
+        h1 { color: #3b82f6; margin-bottom: 5px; font-size: 2.2rem; }
         h3 { color: #94a3b8; font-weight: normal; margin-bottom: 20px; }
         .media-container { background: #000; border-radius: 12px; margin-bottom: 20px; min-height: 150px; display: flex; align-items: center; justify-content: center; border: 1px solid #475569; overflow: hidden; flex-direction: column; padding: 10px; }
-        .media-content { max-width: 100%; max-height: 350px; }
-        .btn { padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; width: 100%; margin-top: 5px; }
+        .media-content { max-width: 100%; max-height: 350px; border-radius: 8px; }
+        .btn { padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; width: 100%; margin-top: 5px; font-size: 1rem; }
         .btn-blue { background: #3b82f6; }
         .btn-green { background: #10b981; }
         .btn-red { background: #ef4444; }
-        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; }
-        input[type="password"] { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; background: #0f172a; color: white; border: 1px solid #334155; box-sizing: border-box; }
-        .hidden { display: none; }
-        .lock-msg { color: #ef4444; font-weight: bold; font-size: 1.1rem; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; cursor: pointer; }
+        input[type="password"] { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; background: #0f172a; color: white; border: 1px solid #334155; box-sizing: border-box; outline: none; }
+        input[type="password"]:focus { border-color: #3b82f6; }
+        .hidden { display: none !important; }
+        .lock-msg { color: #ef4444; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; }
         .lock-sub { color: #64748b; font-size: 0.8rem; margin-top: 5px; }
         .action-group { margin-top: 10px; padding: 10px; border-top: 1px solid #334155; }
-        .loading-text { color: #3b82f6; font-size: 0.9rem; margin: 10px; }
+        .loading-text { color: #3b82f6; font-size: 0.9rem; margin: 10px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -32,7 +35,7 @@
     <h3 id="subtitle">File Transform</h3>
 
     <div id="upload-section">
-        <p style="color: #94a3b8;">Vyber soubor</p>
+        <p style="color: #94a3b8;">Select a file</p>
         <input type="file" id="fileInput">
     </div>
 
@@ -42,20 +45,20 @@
         <div class="media-container" id="mediaHolder"></div>
 
         <div id="unlock-zone" class="hidden">
-            <input type="password" id="unlockPass" placeholder="Zadej heslo pro odemčení">
-            <button class="btn btn-green" onclick="unlockFile()">ODEMKNOUT SOUBOR</button>
+            <input type="password" id="unlockPass" placeholder="Enter password to unlock">
+            <button class="btn btn-green" onclick="unlockFile()">UNLOCK FILE</button>
         </div>
 
         <div id="action-zone" class="hidden">
-            <button class="btn btn-blue" id="btnKotak" onclick="createKotak()">Vytvořit soubor .kotak</button>
-            <div id="ppkotak-init"><button class="btn btn-red" id="btnShowPP" onclick="showPPKotakInput()">Vytvořit soubor .ppkotak</button></div>
+            <button class="btn btn-blue" id="btnKotak" onclick="createKotak()">Create .kotak file</button>
+            <div id="ppkotak-init"><button class="btn btn-red" id="btnShowPP" onclick="showPPKotakInput()">Create .ppkotak file</button></div>
             <div id="ppkotak-input" class="hidden action-group">
-                <input type="password" id="lockPass" placeholder="Zadej heslo pro zabezpečení">
-                <button class="btn btn-red" onclick="createPPKotak()">POTVRDIT A ZAMKNOUT</button>
+                <input type="password" id="lockPass" placeholder="Set security password">
+                <button class="btn btn-red" onclick="createPPKotak()">CONFIRM & LOCK</button>
             </div>
             <button class="btn btn-green" style="margin-top:10px;" id="dlOriginal" onclick="downloadOriginal()">DOWNLOAD ORIGINAL</button>
         </div>
-        <br><a href="#" onclick="location.reload()" style="color: #64748b; font-size: 0.8rem; text-decoration: none; display: block; margin-top: 15px;">← Zvolit jiný soubor</a>
+        <br><a href="#" onclick="location.reload()" style="color: #64748b; font-size: 0.8rem; text-decoration: none; display: block; margin-top: 15px;">← Choose another file</a>
     </div>
 </div>
 
@@ -76,15 +79,15 @@
 
     function showLockScreen() {
         const holder = document.getElementById('mediaHolder');
-        holder.innerHTML = `<div class="lock-msg">SOUBOR JE ŠIFROVÁN</div><div class="lock-sub">technologií Kotak File Engine</div>`;
-        document.getElementById('file-info').innerText = `Soubor: ${currentFileName}`;
+        holder.innerHTML = `<div class="lock-msg">FILE IS ENCRYPTED</div><div class="lock-sub">powered by Kotak File Engine</div>`;
+        document.getElementById('file-info').innerText = `Locked file: ${currentFileName}`;
         document.getElementById('unlock-zone').classList.remove('hidden');
         document.getElementById('action-zone').classList.add('hidden');
     }
 
     async function unlockFile() {
         const pass = document.getElementById('unlockPass').value;
-        if (!pass) { alert("Zadej heslo!"); return; }
+        if (!pass) { alert("Please enter password!"); return; }
         const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass)));
         let decrypted = new Uint8Array(rawFileData.length);
         for (let i = 0; i < rawFileData.length; i++) decrypted[i] = rawFileData[i] ^ key[i % key.length];
@@ -96,7 +99,7 @@
             document.getElementById('action-zone').classList.remove('hidden');
             document.getElementById('ppkotak-init').classList.add('hidden');
             showPreview(currentFileData, detectedExt);
-        } catch (e) { alert("Špatné heslo!"); }
+        } catch (e) { alert("Incorrect password!"); }
     }
 
     function handleStandardFile() {
@@ -118,25 +121,25 @@
 
     async function showPreview(data, ext) {
         const holder = document.getElementById('mediaHolder');
-        holder.innerHTML = '<p class="loading-text">Generuji náhled...</p>';
+        holder.innerHTML = '<p class="loading-text">Generating preview...</p>';
         const extLower = ext.toLowerCase();
         let el, blob = new Blob([data]);
 
-        // SPECIÁLNÍ PODPORA PRO HEIC/HEIF
+        // HEIC Support
         if (extLower === '.heic' || extLower === '.heif') {
             try {
                 const convertedBlob = await heic2any({ blob, toType: "image/jpeg", quality: 0.7 });
                 el = document.createElement('img');
                 el.src = URL.createObjectURL(convertedBlob);
             } catch (e) {
-                holder.innerHTML = `<p>Chyba při převodu HEIC náhledu.</p>`;
+                holder.innerHTML = `<p>Error converting HEIC preview.</p>`;
                 return;
             }
         } 
         else if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(extLower)) {
             el = document.createElement('img'); el.src = URL.createObjectURL(blob);
         } 
-        else if (['.mp4', '.webm'].includes(extLower)) {
+        else if (['.mp4', '.webm', '.mov'].includes(extLower)) {
             el = document.createElement('video'); el.controls = true; el.src = URL.createObjectURL(blob);
         } 
         else if (['.mp3', '.wav', '.ogg', '.m4a'].includes(extLower)) {
@@ -145,9 +148,9 @@
 
         holder.innerHTML = '';
         if (el) { el.className = 'media-content'; holder.appendChild(el); } 
-        else { holder.innerHTML = `<p>Náhled pro ${ext} není k dispozici</p>`; }
+        else { holder.innerHTML = `<p>Preview for ${ext} not available</p>`; }
 
-        document.getElementById('file-info').innerText = `Soubor: ${currentFileName}`;
+        document.getElementById('file-info').innerText = `File: ${currentFileName}`;
         document.getElementById('dlOriginal').innerText = `DOWNLOAD ORIGINAL (${ext.toUpperCase()})`;
     }
 
@@ -158,7 +161,7 @@
 
     async function createPPKotak() {
         const password = document.getElementById('lockPass').value;
-        if (!password) { alert("Zadej heslo!"); return; }
+        if (!password) { alert("Please enter a password!"); return; }
         const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
         const header = new TextEncoder().encode(detectedExt.padEnd(10));
         const combined = new Uint8Array(header.length + currentFileData.length);
