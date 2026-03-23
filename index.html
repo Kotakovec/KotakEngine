@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KotakEngine PWA</title>
+    <title>KotakEngine</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
 
     <style>
         :root {
@@ -23,13 +24,13 @@
             height: 100%;
             background-color: var(--bg);
             color: white;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             overflow: hidden;
         }
 
-        /* --- OBRAZOVKA INSTALACE --- */
+        /* --- INSTALAČNÍ BRÁNA --- */
         #install-screen {
-            display: none; /* Řízeno přes JS */
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -39,18 +40,15 @@
             box-sizing: border-box;
         }
 
-        .logo {
+        .logo-img {
             width: 120px;
             height: 120px;
-            background: var(--primary);
             border-radius: 25px;
             margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 50px;
-            box-shadow: 0 10px 30px rgba(255, 71, 87, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            background-image: url('logo.png');
+            background-size: cover;
+            background-position: center;
         }
 
         #btn-install {
@@ -64,13 +62,7 @@
             font-size: 16px;
             margin: 20px 0;
             cursor: pointer;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.3);
         }
 
         .instruction-box {
@@ -80,12 +72,11 @@
             border: 1px solid #333;
             max-width: 300px;
             font-size: 14px;
-            line-height: 1.6;
         }
 
-        /* --- HLAVNÍ MENU (MAIN UI) --- */
+        /* --- HLAVNÍ MENU --- */
         #main-ui {
-            display: none; /* Řízeno přes JS */
+            display: none;
             flex-direction: column;
             align-items: center;
             padding-top: 50px;
@@ -102,12 +93,12 @@
             max-width: 350px;
             cursor: pointer;
             border: 1px solid #222;
-            transition: 0.3s;
+            transition: transform 0.2s;
         }
 
-        .finta-card:active { transform: scale(0.95); }
+        .finta-card:active { transform: scale(0.96); }
 
-        /* --- WEBVIEW / IFRAME SEKCE --- */
+        /* --- IFRAME / WEBVIEW --- */
         #webview-container {
             display: none;
             position: fixed;
@@ -123,7 +114,7 @@
 
         #back-button {
             position: fixed;
-            top: 25px;
+            top: 30px;
             left: -70px;
             width: 55px;
             height: 55px;
@@ -135,7 +126,6 @@
             align-items: center;
             justify-content: center;
             font-size: 28px;
-            cursor: pointer;
             z-index: 200;
             transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 5px 15px rgba(0,0,0,0.4);
@@ -147,27 +137,26 @@
 <body>
 
     <div id="install-screen">
-        <div class="logo">K</div>
+        <div class="logo-img"></div>
         <h1>KotakEngine</h1>
-        <p>Aplikaci je nutné přidat na plochu pro její spuštění.</p>
+        <p>Pro spuštění aplikaci přidej na plochu.</p>
         
-        <button id="btn-install">INSTALOVAT KOTAKENGINE</button>
+        <button id="btn-install">INSTALOVAT TEĎ</button>
 
-        <div class="instruction-box" id="ios-instructions">
-            <strong>Návod:</strong><br>
-            Klepni na <b style="color:var(--primary)">tlačítko sdílení</b> (čtvereček se šipkou nahoru) a zvol <b style="color:var(--primary)">"Přidat na plochu"</b>.
+        <div class="instruction-box" id="ios-info">
+            Klepni na <b>ikonu sdílení</b> a zvol <b>"Přidat na plochu"</b>.
         </div>
     </div>
 
     <div id="main-ui">
         <h1>Finty</h1>
-        <div class="finta-card" onclick="openFinta('https://www.wikipedia.org')">
+        <div class="finta-card" onclick="openFinta('https://tvoje-finta-1.html')">
             <h2>Finta #1</h2>
-            <p>Zobrazit detailní info</p>
+            <p>Popis první vychytávky</p>
         </div>
-        <div class="finta-card" onclick="openFinta('https://www.seznam.cz')">
+        <div class="finta-card" onclick="openFinta('https://tvoje-finta-2.html')">
             <h2>Finta #2</h2>
-            <p>Další engine trik</p>
+            <p>Popis druhé vychytávky</p>
         </div>
     </div>
 
@@ -185,20 +174,16 @@
         const webviewContainer = document.getElementById('webview-container');
         const backBtn = document.getElementById('back-button');
 
-        // FUNKCE 1: Kontrola, zda je appka na ploše
         function checkStatus() {
-            const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            
-            if (isPWA) {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            if (isStandalone) {
                 installScreen.style.display = "none";
                 mainUI.style.display = "flex";
             } else {
                 installScreen.style.display = "flex";
-                mainUI.style.display = "none";
             }
         }
 
-        // FUNKCE 2: Zachycení instalace pro Android
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -208,20 +193,14 @@
         btnInstall.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('Uživatel instaloval appku');
-                }
                 deferredPrompt = null;
                 btnInstall.style.display = 'none';
             }
         });
 
-        // FUNKCE 3: Navigace v menu
         function openFinta(url) {
             appFrame.src = url;
             webviewContainer.style.display = "block";
-            // Tlačítko vyjede po malé pauze
             setTimeout(() => { backBtn.classList.add('visible'); }, 400);
         }
 
@@ -233,7 +212,6 @@
             }, 300);
         }
 
-        // Spustit kontrolu při načtení
         window.addEventListener('load', checkStatus);
     </script>
 </body>
