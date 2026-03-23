@@ -115,8 +115,10 @@
             document.getElementById('unlock-zone').classList.add('hidden');
             document.getElementById('action-zone').classList.remove('hidden');
             
-            // SKRÝT TLAČÍTKO PRO PPKOTAK, PROTOŽE UŽ JSME V NĚM
+            // LOGIKA PRO PPKOTAK: Skrýt ppkotak tlačítko, ukázat download a kotak
             document.getElementById('ppkotak-init').classList.add('hidden');
+            document.getElementById('btnKotak').classList.remove('hidden');
+            document.getElementById('dlOriginal').classList.remove('hidden');
             
             showPreview(currentFileData, detectedExt);
         } catch (e) {
@@ -131,13 +133,19 @@
                 detectedExt = new TextDecoder().decode(rawFileData.slice(8, 18)).trim();
                 currentFileData = rawFileData.slice(18);
             }
+            // LOGIKA PRO KOTAK: Skrýt kotak tlačítko, ukázat ppkotak a download
+            document.getElementById('btnKotak').classList.add('hidden');
+            document.getElementById('ppkotak-init').classList.remove('hidden');
+            document.getElementById('dlOriginal').classList.remove('hidden');
         } else {
+            // NORMÁLNÍ SOUBOR: Skrýt download (není co obnovovat), ukázat kotak a ppkotak
             detectedExt = currentFileName.substring(currentFileName.lastIndexOf('.'));
             currentFileData = rawFileData;
+            document.getElementById('dlOriginal').classList.add('hidden');
+            document.getElementById('btnKotak').classList.remove('hidden');
+            document.getElementById('ppkotak-init').classList.remove('hidden');
         }
         document.getElementById('action-zone').classList.remove('hidden');
-        // Ukážeme tlačítko pro PPKOTAK, pokud to není beton
-        document.getElementById('ppkotak-init').classList.remove('hidden');
         showPreview(currentFileData, detectedExt);
     }
 
@@ -160,7 +168,6 @@
         if (el) { el.src = url; el.className = 'media-content'; holder.appendChild(el); }
         else { holder.innerHTML = `<p>Náhled pro ${ext} není k dispozici</p>`; }
         
-        // Zobrazení čistého jména souboru bez závorky
         document.getElementById('file-info').innerText = `Soubor: ${currentFileName}`;
         document.getElementById('dlOriginal').innerText = `DOWNLOAD ORIGINAL (${ext.toUpperCase()})`;
     }
