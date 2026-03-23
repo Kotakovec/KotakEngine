@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kotak Engine</title>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #1e293b; padding: 25px; border-radius: 20px; width: 100%; max-width: 480px; border: 1px solid #334155; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); text-align: center; }
+        h1 { color: #3b82f6; margin-bottom: 5px; }
+        h3 { color: #94a3b8; font-weight: normal; margin-bottom: 20px; }
+        .media-container { background: #000; border-radius: 12px; margin-bottom: 20px; min-height: 150px; display: flex; align-items: center; justify-content: center; border: 1px solid #475569; overflow: hidden; flex-direction: column; padding: 10px; }
+        .media-content { max-width: 100%; max-height: 350px; }
+        .btn { padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; width: 100%; margin-top: 5px; }
+        .btn-blue { background: #3b82f6; }
+        .btn-green { background: #10b981; }
+        .btn-red { background: #ef4444; }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; }
+        input[type="password"] { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; background: #0f172a; color: white; border: 1px solid #334155; box-sizing: border-box; }
+        .hidden { display: none; }
+        .lock-msg { color: #ef4444; font-weight: bold; font-size: 1.1rem; }
+        .lock-sub { color: #64748b; font-size: 0.8rem; margin-top: 5px; }
+        .action-group { margin-top: 10px; padding: 10px; border-top: 1px solid #334155; }
+        .loading-text { color: #3b82f6; font-size: 0.9rem; margin: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Kotak Engine</h1>
+    <h3 id="subtitle">File Transform</h3>
+
+    <div id="upload-section">
+        <p style="color: #94a3b8;">Vyber soubor</p>
+        <input type="file" id="fileInput">
+    </div>
+
+    <div id="player-section" class="hidden">
+        <div id="file-info" style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;"></div>
+        
+        <div class="media-container" id="mediaHolder"></div>
+
+        <div id="unlock-zone" class="hidden">
+            <input type="password" id="unlockPass" placeholder="Zadej heslo pro odemčení">
+            <button class="btn btn-green" onclick="unlockFile()">ODEMKNOUT SOUBOR</button>
+        </div>
+
+        <div id="action-zone" class="hidden">
+            <button class="btn btn-blue" id="btnKotak" onclick="createKotak()">Vytvořit soubor .kotak</button>
+            <div id="ppkotak-init"><button class="btn btn-red" id="btnShowPP" onclick="showPPKotakInput()">Vytvořit soubor .ppkotak</button></div>
+            <div id="ppkotak-input" class="hidden action-group">
+                <input type="password" id="lockPass" placeholder="Zadej heslo pro zabezpečení">
+                <button class="btn btn-red" onclick="createPPKotak()">POTVRDIT A ZAMKNOUT</button>
+            </div>
+            <button class="btn btn-green" style="margin-top:10px;" id="dlOriginal" onclick="downloadOriginal()">DOWNLOAD ORIGINAL</button>
+        </div>
+        <br><a href="#" onclick="location.reload()" style="color: #64748b; font-size: 0.8rem; text-decoration: none; display: block; margin-top: 15px;">← Zvolit jiný soubor</a>
+    </div>
+</div>
+
+<script>
+    const SIGNATURE = "KOTAK_V2";
+    let rawFileData = null, currentFileData = null, currentFileName = "", detectedExt = ".bin";
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        currentFileName = file.name;
+        const arrayBuffer = await file.arrayBuffer();
+        rawFileData = new Uint8Array(arrayBuffer);
+        document.getElementById('upload-section').classList.add('hidden');
+        document.getElementById('player-section').classList.remove('hidden');
+        if (currentFileName.endsWith('.ppkotak')) showLockScreen(); else handleStandardFile();
+    });
+
+    function showLockScreen() {
+        const holder = document.getElementById('mediaHolder');
+        holder.innerHTML = `<div class="lock-msg">SOUBOR JE ŠIFROVÁN</div><div class="lock-sub">technologií Kotak File Engine</div>`;
+        document.getElementById('file-info').innerText = `Soubor: ${currentFileName}`;
+        document.getElementById('unlock-zone').classList.remove('hidden');
+        document.getElementById('action-zone').classList.add('hidden');
+    }
+
+    async function unlockFile() {
+        const pass = document.getElementById('unlockPass').value;
+        if (!pass) { alert("Zadej heslo!"); return; }
+        const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass)));
+        let decrypted = new Uint8Array(rawFileData.length);
+        for (let i = 0; i < rawFileData.length; i++) decrypted[i] = rawFileData[i] ^ key[i % key.length];
+        try {
+            detectedExt = new TextDecoder().decode(decrypted.slice(0, 10)).trim();
+            currentFileData = decrypted.slice(10);
+            if (!detectedExt.startsWith('.')) throw new Error();
+            document.getElementById('unlock-zone').classList.add('hidden');
+            document.getElementById('action-zone').classList.remove('hidden');
+            document.getElementById('ppkotak-init').classList.add('hidden');
+            showPreview(currentFileData, detectedExt);
+        } catch (e) { alert("Špatné heslo!"); }
+    }
+
+    function handleStandardFile() {
+        if (currentFileName.endsWith('.kotak')) {
+            const sig = new TextDecoder().decode(rawFileData.slice(0, 8));
+            if (sig === SIGNATURE) {
+                detectedExt = new TextDecoder().decode(rawFileData.slice(8, 18)).trim();
+                currentFileData = rawFileData.slice(18);
+            }
+            document.getElementById('btnKotak').classList.add('hidden');
+        } else {
+            detectedExt = currentFileName.substring(currentFileName.lastIndexOf('.'));
+            currentFileData = rawFileData;
+            document.getElementById('dlOriginal').classList.add('hidden');
+        }
+        document.getElementById('action-zone').classList.remove('hidden');
+        showPreview(currentFileData, detectedExt);
+    }
+
+    async function showPreview(data, ext) {
+        const holder = document.getElementById('mediaHolder');
+        holder.innerHTML = '<p class="loading-text">Generuji náhled...</p>';
+        const extLower = ext.toLowerCase();
+        let el, blob = new Blob([data]);
+
+        // SPECIÁLNÍ PODPORA PRO HEIC/HEIF
+        if (extLower === '.heic' || extLower === '.heif') {
+            try {
+                const convertedBlob = await heic2any({ blob, toType: "image/jpeg", quality: 0.7 });
+                el = document.createElement('img');
+                el.src = URL.createObjectURL(convertedBlob);
+            } catch (e) {
+                holder.innerHTML = `<p>Chyba při převodu HEIC náhledu.</p>`;
+                return;
+            }
+        } 
+        else if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(extLower)) {
+            el = document.createElement('img'); el.src = URL.createObjectURL(blob);
+        } 
+        else if (['.mp4', '.webm'].includes(extLower)) {
+            el = document.createElement('video'); el.controls = true; el.src = URL.createObjectURL(blob);
+        } 
+        else if (['.mp3', '.wav', '.ogg', '.m4a'].includes(extLower)) {
+            el = document.createElement('audio'); el.controls = true; el.src = URL.createObjectURL(blob);
+        }
+
+        holder.innerHTML = '';
+        if (el) { el.className = 'media-content'; holder.appendChild(el); } 
+        else { holder.innerHTML = `<p>Náhled pro ${ext} není k dispozici</p>`; }
+        
+        document.getElementById('file-info').innerText = `Soubor: ${currentFileName}`;
+        document.getElementById('dlOriginal').innerText = `DOWNLOAD ORIGINAL (${ext.toUpperCase()})`;
+    }
+
+    function showPPKotakInput() {
+        document.getElementById('ppkotak-init').classList.add('hidden');
+        document.getElementById('ppkotak-input').classList.remove('hidden');
+    }
+
+    async function createPPKotak() {
+        const password = document.getElementById('lockPass').value;
+        if (!password) { alert("Zadej heslo!"); return; }
+        const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
+        const header = new TextEncoder().encode(detectedExt.padEnd(10));
+        const combined = new Uint8Array(header.length + currentFileData.length);
+        combined.set(header); combined.set(currentFileData, header.length);
+        let finalData = new Uint8Array(combined.length);
+        for (let i = 0; i < combined.length; i++) finalData[i] = combined[i] ^ key[i % key.length];
+        download(finalData, currentFileName.split('.')[0] + ".ppkotak");
+    }
+
+    function createKotak() {
+        const header = new TextEncoder().encode(SIGNATURE + detectedExt.padEnd(10));
+        let finalData = new Uint8Array(header.length + currentFileData.length);
+        finalData.set(header); finalData.set(currentFileData, header.length);
+        download(finalData, currentFileName.split('.')[0] + ".kotak");
+    }
+
+    function downloadOriginal() { download(currentFileData, currentFileName.split('.')[0] + detectedExt); }
+    function download(data, name) {
+        const blob = new Blob([data], {type: "application/octet-stream"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob); link.download = name; link.click();
+    }
+</script>
+</body>
+</html>
