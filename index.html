@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KotakEngine PWA</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        :root {
+            --primary: #ff4757;
+            --bg: #121212;
+            --card-bg: #1e1e1e;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* --- OBRAZOVKA INSTALACE --- */
+        #install-screen {
+            display: none; /* Řízeno přes JS */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            background: var(--primary);
+            border-radius: 25px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 50px;
+            box-shadow: 0 10px 30px rgba(255, 71, 87, 0.4);
+        }
+
+        #btn-install {
+            display: none;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .instruction-box {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #333;
+            max-width: 300px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* --- HLAVNÍ MENU (MAIN UI) --- */
+        #main-ui {
+            display: none; /* Řízeno přes JS */
+            flex-direction: column;
+            align-items: center;
+            padding-top: 50px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .finta-card {
+            background: var(--card-bg);
+            padding: 25px;
+            margin: 15px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 350px;
+            cursor: pointer;
+            border: 1px solid #222;
+            transition: 0.3s;
+        }
+
+        .finta-card:active { transform: scale(0.95); }
+
+        /* --- WEBVIEW / IFRAME SEKCE --- */
+        #webview-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 100;
+        }
+
+        iframe { width: 100%; height: 100%; border: none; }
+
+        #back-button {
+            position: fixed;
+            top: 25px;
+            left: -70px;
+            width: 55px;
+            height: 55px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 200;
+            transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        }
+
+        #back-button.visible { left: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="install-screen">
+        <div class="logo">K</div>
+        <h1>KotakEngine</h1>
+        <p>Aplikaci je nutné přidat na plochu pro její spuštění.</p>
+        
+        <button id="btn-install">INSTALOVAT KOTAKENGINE</button>
+
+        <div class="instruction-box" id="ios-instructions">
+            <strong>Návod:</strong><br>
+            Klepni na <b style="color:var(--primary)">tlačítko sdílení</b> (čtvereček se šipkou nahoru) a zvol <b style="color:var(--primary)">"Přidat na plochu"</b>.
+        </div>
+    </div>
+
+    <div id="main-ui">
+        <h1>Finty</h1>
+        <div class="finta-card" onclick="openFinta('https://www.wikipedia.org')">
+            <h2>Finta #1</h2>
+            <p>Zobrazit detailní info</p>
+        </div>
+        <div class="finta-card" onclick="openFinta('https://www.seznam.cz')">
+            <h2>Finta #2</h2>
+            <p>Další engine trik</p>
+        </div>
+    </div>
+
+    <button id="back-button" onclick="closeFinta()">&#10094;</button>
+    <div id="webview-container">
+        <iframe id="app-frame" src=""></iframe>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        const installScreen = document.getElementById('install-screen');
+        const mainUI = document.getElementById('main-ui');
+        const btnInstall = document.getElementById('btn-install');
+        const appFrame = document.getElementById('app-frame');
+        const webviewContainer = document.getElementById('webview-container');
+        const backBtn = document.getElementById('back-button');
+
+        // FUNKCE 1: Kontrola, zda je appka na ploše
+        function checkStatus() {
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            
+            if (isPWA) {
+                installScreen.style.display = "none";
+                mainUI.style.display = "flex";
+            } else {
+                installScreen.style.display = "flex";
+                mainUI.style.display = "none";
+            }
+        }
+
+        // FUNKCE 2: Zachycení instalace pro Android
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            btnInstall.style.display = 'block';
+        });
+
+        btnInstall.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('Uživatel instaloval appku');
+                }
+                deferredPrompt = null;
+                btnInstall.style.display = 'none';
+            }
+        });
+
+        // FUNKCE 3: Navigace v menu
+        function openFinta(url) {
+            appFrame.src = url;
+            webviewContainer.style.display = "block";
+            // Tlačítko vyjede po malé pauze
+            setTimeout(() => { backBtn.classList.add('visible'); }, 400);
+        }
+
+        function closeFinta() {
+            backBtn.classList.remove('visible');
+            setTimeout(() => {
+                webviewContainer.style.display = "none";
+                appFrame.src = "";
+            }, 300);
+        }
+
+        // Spustit kontrolu při načtení
+        window.addEventListener('load', checkStatus);
+    </script>
+</body>
+</html>
