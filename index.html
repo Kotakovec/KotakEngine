@@ -28,9 +28,9 @@
             overflow: hidden;
         }
 
-        /* --- INSTALAČNÍ BRÁNA --- */
+        /* --- INSTALAČNÍ BRÁNA (Zobrazí se v prohlížeči) --- */
         #install-screen {
-            display: none;
+            display: none; /* Zapne JS pokud není standalone */
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -74,64 +74,18 @@
             font-size: 14px;
         }
 
-        /* --- HLAVNÍ MENU --- */
-        #main-ui {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 50px;
-            height: 100vh;
-            overflow-y: auto;
-        }
-
-        .finta-card {
-            background: var(--card-bg);
-            padding: 25px;
-            margin: 15px;
-            border-radius: 20px;
-            width: 85%;
-            max-width: 350px;
-            cursor: pointer;
-            border: 1px solid #222;
-            transition: transform 0.2s;
-        }
-
-        .finta-card:active { transform: scale(0.96); }
-
-        /* --- IFRAME / WEBVIEW --- */
-        #webview-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
+        /* --- IFRAME PRO MAIN.HTML (Zobrazí se v PWA) --- */
+        #main-app-container {
+            display: none; /* Zapne JS pokud je standalone */
             width: 100%;
             height: 100%;
-            background: white;
-            z-index: 100;
         }
 
-        iframe { width: 100%; height: 100%; border: none; }
-
-        #back-button {
-            position: fixed;
-            top: 30px;
-            left: -70px;
-            width: 55px;
-            height: 55px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
+        iframe {
+            width: 100%;
+            height: 100%;
             border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            z-index: 200;
-            transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
         }
-
-        #back-button.visible { left: 20px; }
     </style>
 </head>
 <body>
@@ -139,51 +93,44 @@
     <div id="install-screen">
         <div class="logo-img"></div>
         <h1>KotakEngine</h1>
-        <p>Pro spuštění aplikaci přidej na plochu.</p>
+        <p>Pro vstup do aplikace si ji přidej na plochu.</p>
         
         <button id="btn-install">INSTALOVAT TEĎ</button>
 
-        <div class="instruction-box" id="ios-info">
-            Klepni na <b>ikonu sdílení</b> a zvol <b>"Přidat na plochu"</b>.
+        <div class="instruction-box">
+            <b>iPhone/iPad:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
+            <b>Android:</b> Klepni na tlačítko výše nebo na tři tečky v prohlížeči.
         </div>
     </div>
 
-    <div id="main-ui">
-        <h1>Finty</h1>
-        <div class="finta-card" onclick="openFinta('https://tvoje-finta-1.html')">
-            <h2>Finta #1</h2>
-            <p>Popis první vychytávky</p>
-        </div>
-        <div class="finta-card" onclick="openFinta('https://tvoje-finta-2.html')">
-            <h2>Finta #2</h2>
-            <p>Popis druhé vychytávky</p>
-        </div>
-    </div>
-
-    <button id="back-button" onclick="closeFinta()">&#10094;</button>
-    <div id="webview-container">
-        <iframe id="app-frame" src=""></iframe>
+    <div id="main-app-container">
+        <iframe id="main-frame" src=""></iframe>
     </div>
 
     <script>
         let deferredPrompt;
         const installScreen = document.getElementById('install-screen');
-        const mainUI = document.getElementById('main-ui');
+        const mainAppContainer = document.getElementById('main-app-container');
+        const mainFrame = document.getElementById('main-frame');
         const btnInstall = document.getElementById('btn-install');
-        const appFrame = document.getElementById('app-frame');
-        const webviewContainer = document.getElementById('webview-container');
-        const backBtn = document.getElementById('back-button');
 
         function checkStatus() {
+            // Zjistíme, jestli uživatel už spustil appku z plochy
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            
             if (isStandalone) {
+                // JE NA PLOŠE: Schováme bránu a načteme main.html do iFramu
                 installScreen.style.display = "none";
-                mainUI.style.display = "flex";
+                mainAppContainer.style.display = "block";
+                mainFrame.src = "main.html"; 
             } else {
+                // JE V PROHLÍŽEČI: Ukážeme bránu s návodem
                 installScreen.style.display = "flex";
+                mainAppContainer.style.display = "none";
             }
         }
 
+        // Android logika pro instalační tlačítko
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -198,20 +145,7 @@
             }
         });
 
-        function openFinta(url) {
-            appFrame.src = url;
-            webviewContainer.style.display = "block";
-            setTimeout(() => { backBtn.classList.add('visible'); }, 400);
-        }
-
-        function closeFinta() {
-            backBtn.classList.remove('visible');
-            setTimeout(() => {
-                webviewContainer.style.display = "none";
-                appFrame.src = "";
-            }, 300);
-        }
-
+        // Spustit kontrolu hned po načtení
         window.addEventListener('load', checkStatus);
     </script>
 </body>
