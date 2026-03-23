@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KotakEngine</title>
+    <style>
+        /* Základní styl */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: sans-serif;
+            background-color: #121212;
+            color: white;
+            overflow: hidden;
+        }
+
+        /* Hlavní menu */
+        #main-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        .finta-card {
+            background: #1e1e1e;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 300px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: 1px solid #333;
+        }
+
+        .finta-card:hover {
+            transform: scale(1.05);
+            background: #252525;
+        }
+
+        /* WebView kontejner (iframe) */
+        #webview-container {
+            display: none; /* Schované, dokud se neklikne na fintu */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Kulaté tlačítko ZPĚT */
+        #back-button {
+            position: fixed;
+            top: 20px;
+            left: -60px; /* Schované vlevo mimo obrazovku */
+            width: 50px;
+            height: 50px;
+            background-color: #ff4757;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 999;
+            transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: none;
+        }
+
+        #back-button.visible {
+            left: 20px; /* Vyjede zleva */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <h1>KotakEngine</h1>
+        <p>Vyber si fintu:</p>
+        
+        <div class="finta-card" onclick="otevriFintu('https://www.wikipedia.org')">
+            <h3>Finta #1 (Příklad)</h3>
+            <p>Klikni pro otevření</p>
+        </div>
+
+        <div class="finta-card" onclick="otevriFintu('https://www.seznam.cz')">
+            <h3>Finta #2 (Příklad)</h3>
+            <p>Další super věc</p>
+        </div>
+    </div>
+
+    <button id="back-button" onclick="zpetDoMenu()">&#10094;</button>
+
+    <div id="webview-container">
+        <iframe id="finta-frame" src=""></iframe>
+    </div>
+
+    <script>
+        const mainMenu = document.getElementById('main-menu');
+        const webviewContainer = document.getElementById('webview-container');
+        const fintaFrame = document.getElementById('finta-frame');
+        const backButton = document.getElementById('back-button');
+
+        function otevriFintu(url) {
+            // Nastavíme URL do iFramu
+            fintaFrame.src = url;
+            
+            // Schováme menu a ukážeme WebView
+            mainMenu.style.display = 'none';
+            webviewContainer.style.display = 'block';
+            
+            // Animace tlačítka (vyjede zleva)
+            setTimeout(() => {
+                backButton.classList.add('visible');
+            }, 300);
+        }
+
+        function zpetDoMenu() {
+            // Schováme tlačítko zpět
+            backButton.classList.remove('visible');
+            
+            // Po krátké pauze přepneme zobrazení
+            setTimeout(() => {
+                webviewContainer.style.display = 'none';
+                mainMenu.style.display = 'flex';
+                fintaFrame.src = ""; // Vyčistíme iframe
+            }, 300);
+        }
+    </script>
+
+</body>
+</html>
