@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KotakEngine - Main</title>
     <style>
-        /* Základní nastavení */
         body, html {
             margin: 0;
             padding: 0;
@@ -17,18 +16,16 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* PLÁTNO PRO ANIMACI NA POZADÍ */
         canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1; /* Úplně vespod */
-            pointer-events: none; /* Kliknutí propadnou na menu */
+            z-index: 1; 
+            pointer-events: none; 
         }
 
-        /* Hlavní menu nad animací */
         #main-menu {
             position: relative;
             display: flex;
@@ -37,8 +34,8 @@
             padding: 40px 20px;
             height: 100vh;
             box-sizing: border-box;
-            z-index: 5; /* Nad canvasem */
-            background: rgba(0, 0, 0, 0.4); /* Jemné ztmavení pro čitelnost */
+            z-index: 5; 
+            background: rgba(0, 0, 0, 0.4); 
             overflow-y: auto;
         }
 
@@ -57,16 +54,18 @@
             max-width: 400px;
         }
 
+        /* Vylepšené kulaté karty */
         .finta-card {
-            background: rgba(22, 22, 22, 0.85); /* Průhlednost pro efekt */
-            backdrop-filter: blur(5px); /* Rozmazání pozadí pod kartou */
+            background: rgba(22, 22, 22, 0.85); 
+            backdrop-filter: blur(5px); 
             display: flex;
             align-items: center;
-            padding: 20px;
-            border-radius: 18px;
+            padding: 15px 25px;
+            border-radius: 40px; /* Hodně kulaté */
             cursor: pointer;
             transition: transform 0.1s, background 0.2s;
             border: 1px solid rgba(76, 175, 80, 0.3);
+            position: relative;
         }
 
         .finta-card:active {
@@ -74,26 +73,27 @@
             background: rgba(76, 175, 80, 0.2);
         }
 
-        .finta-card span {
-            font-size: 30px;
-            margin-right: 20px;
+        /* Emoji vlevo */
+        .finta-card .emoji {
+            font-size: 24px;
+            position: absolute;
+            left: 25px;
         }
 
+        /* Text uprostřed */
         .finta-card h3 {
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
+            width: 100%;
+            text-align: center;
+            font-weight: 500;
         }
 
-        /* WEBVIEW KONTEJNER */
         #webview-container {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 100;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 100;
         }
 
         iframe { width: 100%; height: 100%; border: none; }
@@ -120,38 +120,26 @@
 
         #back-button.visible { left: 15px; }
 
-        /* UI INFO (Skryté nebo v rohu) */
-        .ui-stats {
+        /* Podpis vpravo dole */
+        .footer {
             position: fixed;
-            bottom: 10px;
-            right: 10px;
-            font-size: 10px;
-            color: rgba(255,255,255,0.3);
-            z-index: 2;
-            pointer-events: none;
+            bottom: 15px;
+            right: 15px;
+            font-size: 12px;
+            color: rgba(76, 175, 80, 0.7);
+            z-index: 6;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <div class="ui-stats">Alive: <span class="alive">0</span> | FPS: <span class="fps">0</span></div>
+    <div class="footer">Created by Koťák</div>
 
     <div id="main-menu">
         <h1>KotakEngine</h1>
-        <div class="grid">
-            <div class="finta-card" onclick="otevriAplikaci('file.html')">
-                <span>🔐</span>
-                <h3>File Encrypter</h3>
+        <div class="grid" id="tlacitka-grid">
             </div>
-            <div class="finta-card" onclick="otevriAplikaci('brzy.html')">
-                <span>🚀</span>
-                <h3>Další finta</h3>
-            </div>
-            <div class="finta-card" onclick="otevriAplikaci('nastaveni.html')">
-                <span>⚙️</span>
-                <h3>Nastavení</h3>
-            </div>
-        </div>
     </div>
 
     <button id="back-button" onclick="zpetDoMenu()">&#10094;</button>
@@ -161,6 +149,25 @@
     </div>
 
     <script>
+        /* --- NASTAVENÍ TLAČÍTEK (Tady si snadno přidáš další) --- */
+        const seznamFint = [
+            { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" },
+            { nazev: "Další finta", emoji: "🚀", soubor: "brzy.html" },
+            { nazev: "Nastavení", emoji: "⚙️", soubor: "nastaveni.html" },
+            // { nazev: "Nová Finta", emoji: "🔥", soubor: "nova.html" }, <-- Takhle prostě přidáš další
+        ];
+
+        const grid = document.getElementById('tlacitka-grid');
+
+        // Automatické vytvoření tlačítek z pole výše
+        seznamFint.forEach(finta => {
+            const card = document.createElement('div');
+            card.className = 'finta-card';
+            card.onclick = () => otevriAplikaci(finta.soubor);
+            card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
+            grid.appendChild(card);
+        });
+
         /* --- LOGIKA MENU --- */
         const mainMenu = document.getElementById('main-menu');
         const webviewContainer = document.getElementById('webview-container');
@@ -183,7 +190,7 @@
             }, 250);
         }
 
-        /* --- LOGIKA ANIMACE (Alex Andrix modifikováno) --- */
+        /* --- LOGIKA ANIMACE NA POZADÍ (Tvoje původní) --- */
         var App = {};
         App.setup = function() {
             var canvas = document.createElement('canvas');
@@ -191,7 +198,6 @@
             document.body.appendChild(canvas);
             this.ctx = this.canvas.getContext('2d');
             this.onResize();
-            
             this.stepCount = 0;
             this.particles = [];
             this.lifespan = 1000;
@@ -200,18 +206,14 @@
             this.gridSize = 10;
             this.gridSteps = Math.floor(1000 / this.gridSize);
             this.grid = [];
-            
-            var i = 0;
             for (var xx = -500; xx < 500; xx += this.gridSize) {
                 for (var yy = -500; yy < 500; yy += this.gridSize) {
                     var r = Math.sqrt(xx*xx+yy*yy), r0 = 100, field;
                     if (r < r0) field = 255 / r0 * r;
                     else field = 255 - Math.min(255, (r - r0)/2);
-                    this.grid.push({x: xx, y: yy, busyAge: 0, spotIndex: i, field: field});
-                    i++;
+                    this.grid.push({x: xx, y: yy, busyAge: 0, spotIndex: this.grid.length, field: field});
                 }
             }
-            this.gridMaxIndex = i;
         };
 
         App.onResize = function() {
@@ -222,11 +224,10 @@
         };
 
         App.birth = function() {
-            var gridSpotIndex = Math.floor(Math.random() * this.gridMaxIndex);
+            var gridSpotIndex = Math.floor(Math.random() * this.grid.length);
             var gridSpot = this.grid[gridSpotIndex];
             this.particles.push({
-                hue: 120, // Zelená pro KotakEngine
-                sat: 70, lum: 40,
+                hue: 120, sat: 70, lum: 40,
                 x: gridSpot.x, y: gridSpot.y, xLast: gridSpot.x, yLast: gridSpot.y,
                 xSpeed: 0, ySpeed: 0, age: 0, ageSinceStuck: 0,
                 attractor: { oldIndex: gridSpotIndex, gridSpotIndex: gridSpotIndex },
@@ -240,7 +241,6 @@
                 p.xLast = p.x; p.yLast = p.y;
                 var index = p.attractor.gridSpotIndex;
                 var gridSpot = this.grid[index];
-
                 if (Math.random() < 0.5) {
                     var neighbors = [index-1, index+1, index-this.gridSteps, index+this.gridSteps];
                     var best = gridSpot;
@@ -248,13 +248,10 @@
                         if (this.grid[idx] && this.grid[idx].field > best.field) best = this.grid[idx];
                     });
                     if (best.busyAge == 0) {
-                        p.ageSinceStuck = 0;
-                        p.attractor.oldIndex = index;
-                        p.attractor.gridSpotIndex = best.spotIndex;
-                        best.busyAge = 1;
+                        p.ageSinceStuck = 0; p.attractor.oldIndex = index;
+                        p.attractor.gridSpotIndex = best.spotIndex; best.busyAge = 1;
                     } else p.ageSinceStuck++;
                 }
-                
                 var k = 8, visc = 0.4;
                 p.xSpeed = (p.xSpeed + (gridSpot.x - p.x) * k) * visc;
                 p.ySpeed = (p.ySpeed + (gridSpot.y - p.y) * k) * visc;
@@ -268,13 +265,11 @@
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             this.ctx.fillRect(0, 0, this.width, this.height);
             this.particles.forEach(p => {
-                var h = p.hue, s = p.sat, l = p.lum;
                 var lx = this.xC + p.xLast * 1.5, ly = this.yC + p.yLast * 1.5;
                 var nx = this.xC + p.x * 1.5, ny = this.yC + p.y * 1.5;
                 this.ctx.beginPath();
-                this.ctx.strokeStyle = `hsla(${h}, ${s}%, ${l}%, 1)`;
-                this.ctx.moveTo(lx, ly);
-                this.ctx.lineTo(nx, ny);
+                this.ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, 1)`;
+                this.ctx.moveTo(lx, ly); this.ctx.lineTo(nx, ny);
                 this.ctx.stroke();
             });
         };
@@ -284,9 +279,7 @@
         function frame() {
             App.stepCount++;
             if (App.stepCount % App.birthFreq == 0 && App.particles.length < App.maxPop) App.birth();
-            App.move();
-            App.draw();
-            document.querySelector('.alive').textContent = App.particles.length;
+            App.move(); App.draw();
             requestAnimationFrame(frame);
         }
         frame();
