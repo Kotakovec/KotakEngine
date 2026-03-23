@@ -14,23 +14,23 @@
         .btn { padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; width: 100%; margin-top: 5px; }
         .btn-blue { background: #3b82f6; }
         .btn-green { background: #10b981; }
+        .btn-red { background: #ef4444; }
         input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; }
         input[type="password"] { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; background: #0f172a; color: white; border: 1px solid #334155; box-sizing: border-box; }
         .hidden { display: none; }
         .lock-msg { color: #ef4444; font-weight: bold; font-size: 1.1rem; }
         .lock-sub { color: #64748b; font-size: 0.8rem; margin-top: 5px; }
-        a { color: #64748b; font-size: 0.8rem; text-decoration: none; margin-top: 15px; display: inline-block; }
+        .action-group { margin-top: 10px; padding: 10px; border-top: 1px solid #334155; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h1>Kotak Engine</h1>
-    <h3>File Transform</h3>
+    <h3 id="subtitle">File Transform</h3>
 
     <div id="upload-section">
-        <p style="color: #94a3b8;">Select file or .kotak / .ppkotak</p>
-        <input type="password" id="initialPassword" placeholder="Heslo pro odemčení .ppkotak">
+        <p style="color: #94a3b8;">Vyber soubor</p>
         <input type="file" id="fileInput">
     </div>
 
@@ -39,41 +39,36 @@
         
         <div class="media-container" id="mediaHolder"></div>
 
-        <div class="controls" id="actionControls">
-            <input type="password" id="savePassword" placeholder="Heslo (Optional - pro .ppkotak)" oninput="updateButtonText()">
-            <button class="btn btn-blue" id="mainActionBtn" onclick="handleMainAction()">Vytvořit soubor .kotak</button>
-            <button class="btn btn-green" style="margin-top:10px;" id="dlBtn" onclick="downloadOriginal()">DOWNLOAD ORIGINAL</button>
+        <div id="unlock-zone" class="hidden">
+            <input type="password" id="unlockPass" placeholder="Zadej heslo pro odemčení">
+            <button class="btn btn-green" onclick="unlockFile()">ODEMKNOUT SOUBOR</button>
         </div>
-        <a href="#" onclick="location.reload()">← Choose another</a>
+
+        <div id="action-zone" class="hidden">
+            <button class="btn btn-blue" id="btnKotak" onclick="createKotak()">Vytvořit soubor .kotak</button>
+            
+            <div id="ppkotak-init">
+                <button class="btn btn-red" onclick="showPPKotakInput()">Vytvořit soubor .ppkotak</button>
+            </div>
+            
+            <div id="ppkotak-input" class="hidden action-group">
+                <input type="password" id="lockPass" placeholder="Zadej heslo pro zabezpečení">
+                <button class="btn btn-red" onclick="createPPKotak()">POTVRDIT A ZAMKNOUT</button>
+            </div>
+
+            <button class="btn btn-green" style="margin-top:10px;" id="dlOriginal" onclick="downloadOriginal()">DOWNLOAD ORIGINAL</button>
+        </div>
+        
+        <br><a href="#" onclick="location.reload()" style="color: #64748b; font-size: 0.8rem; text-decoration: none; display: block; margin-top: 15px;">← Zvolit jiný soubor</a>
     </div>
 </div>
 
 <script>
     const SIGNATURE = "KOTAK_V2";
-    let currentFileData = null;
+    let rawFileData = null;      // Původní data z inputu
+    let currentFileData = null;  // Data po dešifrování/rozbalení
     let currentFileName = "";
     let detectedExt = ".bin";
-    let isEncrypted = false;
-    let originalSourceType = ""; // Pomůže nám vědět, co uživatel nahrál
-
-    // Dynamická změna textu tlačítek
-    function updateButtonText() {
-        const pass = document.getElementById('savePassword').value;
-        const btn = document.getElementById('mainActionBtn');
-        
-        if (originalSourceType === "ppkotak") {
-            btn.innerText = "Vytvořit soubor .kotak";
-            btn.style.background = "#3b82f6";
-        } else {
-            if (pass.length > 0) {
-                btn.innerText = "Vytvořit soubor .ppkotak";
-                btn.style.background = "#ef4444";
-            } else {
-                btn.innerText = "Vytvořit soubor .kotak";
-                btn.style.background = "#3b82f6";
-            }
-        }
-    }
 
     document.getElementById('fileInput').addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -81,53 +76,65 @@
 
         currentFileName = file.name;
         const arrayBuffer = await file.arrayBuffer();
-        let data = new Uint8Array(arrayBuffer);
-        let pass = document.getElementById('initialPassword').value;
+        rawFileData = new Uint8Array(arrayBuffer);
 
-        const holder = document.getElementById('mediaHolder');
         document.getElementById('upload-section').classList.add('hidden');
         document.getElementById('player-section').classList.remove('hidden');
 
         if (currentFileName.endsWith('.ppkotak')) {
-            originalSourceType = "ppkotak";
-            if (!pass) {
-                isEncrypted = true;
-                holder.innerHTML = `<div class="lock-msg">SOUBOR JE ŠIFROVÁN</div><div class="lock-sub">technologií Kotak File Engine</div>`;
-                document.getElementById('file-info').innerText = `Uzamčený soubor: ${currentFileName}`;
-                document.getElementById('dlBtn').classList.add('hidden');
-                updateButtonText();
-                return;
-            } else {
-                const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass)));
-                let decrypted = new Uint8Array(data.length);
-                for (let i = 0; i < data.length; i++) {
-                    decrypted[i] = data[i] ^ key[i % key.length];
-                }
-                detectedExt = new TextDecoder().decode(decrypted.slice(0, 10)).trim();
-                data = decrypted.slice(10);
-                isEncrypted = false;
-                document.getElementById('dlBtn').classList.remove('hidden');
-            }
-        } 
-        else if (currentFileName.endsWith('.kotak')) {
-            originalSourceType = "kotak";
-            const sig = new TextDecoder().decode(data.slice(0, 8));
-            if (sig === SIGNATURE) {
-                detectedExt = new TextDecoder().decode(data.slice(8, 18)).trim();
-                data = data.slice(18);
-            }
-            isEncrypted = false;
-        } 
-        else {
-            originalSourceType = "normal";
-            detectedExt = currentFileName.substring(currentFileName.lastIndexOf('.'));
-            isEncrypted = false;
+            showLockScreen();
+        } else {
+            handleStandardFile();
         }
-
-        currentFileData = data;
-        updateButtonText();
-        showPreview(data, detectedExt);
     });
+
+    function showLockScreen() {
+        const holder = document.getElementById('mediaHolder');
+        holder.innerHTML = `<div class="lock-msg">SOUBOR JE ŠIFROVÁN</div><div class="lock-sub">technologií Kotak File Engine</div>`;
+        document.getElementById('file-info').innerText = `Uzamčený soubor: ${currentFileName}`;
+        document.getElementById('unlock-zone').classList.remove('hidden');
+        document.getElementById('action-zone').classList.add('hidden');
+    }
+
+    async function unlockFile() {
+        const pass = document.getElementById('unlockPass').value;
+        if (!pass) { alert("Zadej heslo!"); return; }
+
+        const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass)));
+        let decrypted = new Uint8Array(rawFileData.length);
+        for (let i = 0; i < rawFileData.length; i++) {
+            decrypted[i] = rawFileData[i] ^ key[i % key.length];
+        }
+        
+        try {
+            detectedExt = new TextDecoder().decode(decrypted.slice(0, 10)).trim();
+            currentFileData = decrypted.slice(10);
+            
+            // Kontrola jestli to dává smysl (pokud je první znak tečka, asi je heslo správně)
+            if (!detectedExt.startsWith('.')) throw new Error();
+
+            document.getElementById('unlock-zone').classList.add('hidden');
+            document.getElementById('action-zone').classList.remove('hidden');
+            showPreview(currentFileData, detectedExt);
+        } catch (e) {
+            alert("Špatné heslo nebo poškozený soubor!");
+        }
+    }
+
+    function handleStandardFile() {
+        if (currentFileName.endsWith('.kotak')) {
+            const sig = new TextDecoder().decode(rawFileData.slice(0, 8));
+            if (sig === SIGNATURE) {
+                detectedExt = new TextDecoder().decode(rawFileData.slice(8, 18)).trim();
+                currentFileData = rawFileData.slice(18);
+            }
+        } else {
+            detectedExt = currentFileName.substring(currentFileName.lastIndexOf('.'));
+            currentFileData = rawFileData;
+        }
+        document.getElementById('action-zone').classList.remove('hidden');
+        showPreview(currentFileData, detectedExt);
+    }
 
     function showPreview(data, ext) {
         const blob = new Blob([data]);
@@ -145,52 +152,44 @@
             el = document.createElement('audio'); el.controls = true;
         }
 
-        if (el) { 
-            el.src = url; el.className = 'media-content'; holder.appendChild(el); 
-        } else { 
-            holder.innerHTML = `<p>Náhled pro ${ext} není k dispozici (Odemčeno)</p>`; 
-        }
-        document.getElementById('file-info').innerText = `Soubor: ${currentFileName} (${ext})`;
-        document.getElementById('dlBtn').innerText = "DOWNLOAD ORIGINAL (" + ext.toUpperCase() + ")";
-    }
-
-    async function handleMainAction() {
-        if (isEncrypted) { alert("Soubor musíte nejprve odemknout!"); return; }
-        const password = document.getElementById('savePassword').value;
+        if (el) { el.src = url; el.className = 'media-content'; holder.appendChild(el); }
+        else { holder.innerHTML = `<p>Náhled pro ${ext} není k dispozici</p>`; }
         
-        // Pokud jsme nahráli .ppkotak, vždy vytváříme .kotak (pokud není zadáno nové heslo pro přešifrování)
-        // V tomto kódu pro jednoduchost: prázdné heslo = .kotak, heslo = .ppkotak
-        await processFile(password ? 'ppkotak' : 'kotak', password);
+        document.getElementById('file-info').innerText = `Soubor: ${currentFileName} (${ext})`;
+        document.getElementById('dlOriginal').innerText = `DOWNLOAD ORIGINAL (${ext.toUpperCase()})`;
     }
 
-    async function processFile(mode, password) {
-        let finalData;
-        let finalName = currentFileName.split('.')[0];
+    function showPPKotakInput() {
+        document.getElementById('ppkotak-init').classList.add('hidden');
+        document.getElementById('ppkotak-input').classList.remove('hidden');
+    }
 
-        if (mode === 'kotak') {
-            const header = new TextEncoder().encode(SIGNATURE + detectedExt.padEnd(10));
-            finalData = new Uint8Array(header.length + currentFileData.length);
-            finalData.set(header);
-            finalData.set(currentFileData, header.length);
-            finalName += ".kotak";
-        } else {
-            const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
-            const header = new TextEncoder().encode(detectedExt.padEnd(10));
-            const combined = new Uint8Array(header.length + currentFileData.length);
-            combined.set(header);
-            combined.set(currentFileData, header.length);
-            
-            finalData = new Uint8Array(combined.length);
-            for (let i = 0; i < combined.length; i++) {
-                finalData[i] = combined[i] ^ key[i % key.length];
-            }
-            finalName += ".ppkotak";
+    async function createPPKotak() {
+        const password = document.getElementById('lockPass').value;
+        if (!password) { alert("Zadej heslo pro uzamčení!"); return; }
+
+        const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
+        const header = new TextEncoder().encode(detectedExt.padEnd(10));
+        const combined = new Uint8Array(header.length + currentFileData.length);
+        combined.set(header);
+        combined.set(currentFileData, header.length);
+        
+        let finalData = new Uint8Array(combined.length);
+        for (let i = 0; i < combined.length; i++) {
+            finalData[i] = combined[i] ^ key[i % key.length];
         }
-        download(finalData, finalName);
+        download(finalData, currentFileName.split('.')[0] + ".ppkotak");
+    }
+
+    function createKotak() {
+        const header = new TextEncoder().encode(SIGNATURE + detectedExt.padEnd(10));
+        let finalData = new Uint8Array(header.length + currentFileData.length);
+        finalData.set(header);
+        finalData.set(currentFileData, header.length);
+        download(finalData, currentFileName.split('.')[0] + ".kotak");
     }
 
     function downloadOriginal() {
-        if (isEncrypted) return;
         download(currentFileData, currentFileName.split('.')[0] + detectedExt);
     }
 
