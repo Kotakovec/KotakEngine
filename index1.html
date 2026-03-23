@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kotak Engine | File Transform</title>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: #1e293b; padding: 25px; border-radius: 24px; width: 100%; max-width: 480px; border: 1px solid #334155; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); text-align: center; }
+        h1 { color: #3b82f6; margin: 0 0 5px 0; font-size: 2.2rem; }
+        h3 { color: #94a3b8; font-weight: normal; margin: 0 0 20px 0; }
+        .media-container { background: #000; border-radius: 12px; margin-bottom: 20px; min-height: 150px; display: flex; align-items: center; justify-content: center; border: 1px solid #475569; overflow: hidden; flex-direction: column; padding: 10px; }
+        .media-content { max-width: 100%; max-height: 350px; border-radius: 8px; }
+        .btn { padding: 14px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; width: 100%; margin-top: 8px; font-size: 0.95rem; }
+        .btn-blue { background: #3b82f6; }
+        .btn-green { background: #10b981; }
+        .btn-red { background: #ef4444; }
+        .btn-ghost { background: #6366f1; } /* Indigo barva pro Ghost mode */
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        input[type="file"] { margin-bottom: 20px; color: #94a3b8; width: 100%; cursor: pointer; }
+        input[type="password"] { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; background: #0f172a; color: white; border: 1px solid #334155; box-sizing: border-box; outline: none; }
+        input[type="password"]:focus { border-color: #3b82f6; }
+        .hidden { display: none !important; }
+        .lock-msg { color: #ef4444; font-weight: bold; font-size: 1.1rem; text-transform: uppercase; }
+        .lock-sub { color: #64748b; font-size: 0.8rem; margin-top: 5px; }
+        .action-group { margin-top: 10px; padding: 15px 10px; border-top: 1px solid #334155; }
+        .info-label { font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Kotak Engine</h1>
+    <h3>File Transform</h3>
+
+    <div id="upload-section">
+        <p style="color: #94a3b8;">Select a file</p>
+        <input type="file" id="fileInput">
+    </div>
+
+    <div id="player-section" class="hidden">
+        <div id="file-info" class="info-label"></div>
+        <div class="media-container" id="mediaHolder"></div>
+
+        <div id="unlock-zone" class="hidden">
+            <input type="password" id="unlockPass" placeholder="Enter password to unlock">
+            <button class="btn btn-green" onclick="unlockFile()">UNLOCK FILE</button>
+        </div>
+
+        <div id="action-zone" class="hidden">
+            <button class="btn btn-blue" id="btnKotak" onclick="createKotak()">CREATE .KOTAK FILE</button>
+            
+            <div id="ppkotak-init">
+                <button class="btn btn-red" onclick="showPPKotakInput()">CREATE .PPKOTAK FILE</button>
+            </div>
+
+            <div id="ppkotak-input" class="hidden action-group">
+                <input type="password" id="lockPass" placeholder="Set security password">
+                <button class="btn btn-red" onclick="createPPKotak(false)">CONFIRM & LOCK</button>
+                <button class="btn btn-ghost" onclick="createPPKotak(true)">LOCK & GHOST NAME</button>
+                <p style="font-size: 0.7rem; color: #64748b; margin-top: 10px;">Ghost Name hides original filename</p>
+            </div>
+
+            <button class="btn btn-green" style="margin-top:15px;" id="dlOriginal" onclick="downloadOriginal()">DOWNLOAD ORIGINAL</button>
+        </div>
+        
+        <br><a href="#" onclick="location.reload()" style="color: #64748b; font-size: 0.8rem; text-decoration: none; display: block; margin-top: 15px;">← Choose another file</a>
+    </div>
+</div>
+
+<script>
+    const SIGNATURE = "KOTAK_V2";
+    let rawFileData = null, currentFileData = null, currentFileName = "", detectedExt = ".bin";
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        currentFileName = file.name;
+        const arrayBuffer = await file.arrayBuffer();
+        rawFileData = new Uint8Array(arrayBuffer);
+        document.getElementById('upload-section').classList.add('hidden');
+        document.getElementById('player-section').classList.remove('hidden');
+        if (currentFileName.endsWith('.ppkotak')) showLockScreen(); else handleStandardFile();
+    });
+
+    function showLockScreen() {
+        const holder = document.getElementById('mediaHolder');
+        holder.innerHTML = `<div class="lock-msg">FILE IS ENCRYPTED</div><div class="lock-sub">powered by Kotak File Engine</div>`;
+        document.getElementById('file-info').innerText = `Locked file: ${currentFileName}`;
+        document.getElementById('unlock-zone').classList.remove('hidden');
+        document.getElementById('action-zone').classList.add('hidden');
+    }
+
+    async function unlockFile() {
+        const pass = document.getElementById('unlockPass').value;
+        if (!pass) return;
+        const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass)));
+        let decrypted = new Uint8Array(rawFileData.length);
+        for (let i = 0; i < rawFileData.length; i++) decrypted[i] = rawFileData[i] ^ key[i % key.length];
+        try {
+            detectedExt = new TextDecoder().decode(decrypted.slice(0, 10)).trim();
+            currentFileData = decrypted.slice(10);
+            if (!detectedExt.startsWith('.')) throw new Error();
+            document.getElementById('unlock-zone').classList.add('hidden');
+            document.getElementById('action-zone').classList.remove('hidden');
+            document.getElementById('ppkotak-init').classList.add('hidden');
+            showPreview(currentFileData, detectedExt);
+        } catch (e) { alert("Incorrect password!"); }
+    }
+
+    function handleStandardFile() {
+        if (currentFileName.endsWith('.kotak')) {
+            const sig = new TextDecoder().decode(rawFileData.slice(0, 8));
+            if (sig === SIGNATURE) {
+                detectedExt = new TextDecoder().decode(rawFileData.slice(8, 18)).trim();
+                currentFileData = rawFileData.slice(18);
+            }
+            document.getElementById('btnKotak').classList.add('hidden');
+        } else {
+            detectedExt = currentFileName.substring(currentFileName.lastIndexOf('.'));
+            currentFileData = rawFileData;
+            document.getElementById('dlOriginal').classList.add('hidden');
+        }
+        document.getElementById('action-zone').classList.remove('hidden');
+        showPreview(currentFileData, detectedExt);
+    }
+
+    async function showPreview(data, ext) {
+        const holder = document.getElementById('mediaHolder');
+        holder.innerHTML = '<p style="color:#3b82f6">Generating preview...</p>';
+        const extLower = ext.toLowerCase();
+        let el, blob = new Blob([data]);
+
+        if (extLower === '.heic' || extLower === '.heif') {
+            try {
+                const convertedBlob = await heic2any({ blob, toType: "image/jpeg", quality: 0.7 });
+                el = document.createElement('img'); el.src = URL.createObjectURL(convertedBlob);
+            } catch (e) { holder.innerHTML = `<p>Preview error.</p>`; return; }
+        } 
+        else if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(extLower)) {
+            el = document.createElement('img'); el.src = URL.createObjectURL(blob);
+        } 
+        else if (['.mp4', '.webm', '.mov'].includes(extLower)) {
+            el = document.createElement('video'); el.controls = true; el.src = URL.createObjectURL(blob);
+        } 
+        else if (['.mp3', '.wav', '.ogg', '.m4a'].includes(extLower)) {
+            el = document.createElement('audio'); el.controls = true; el.src = URL.createObjectURL(blob);
+        }
+
+        holder.innerHTML = '';
+        if (el) { el.className = 'media-content'; holder.appendChild(el); } 
+        else { holder.innerHTML = `<p>Preview not available</p>`; }
+        document.getElementById('file-info').innerText = `File: ${currentFileName}`;
+        document.getElementById('dlOriginal').innerText = `DOWNLOAD ORIGINAL (${ext.toUpperCase()})`;
+    }
+
+    function showPPKotakInput() {
+        document.getElementById('ppkotak-init').classList.add('hidden');
+        document.getElementById('ppkotak-input').classList.remove('hidden');
+    }
+
+    async function createPPKotak(useGhostName) {
+        const password = document.getElementById('lockPass').value;
+        if (!password) { alert("Please enter password!"); return; }
+        
+        const key = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
+        const header = new TextEncoder().encode(detectedExt.padEnd(10));
+        const combined = new Uint8Array(header.length + currentFileData.length);
+        combined.set(header); combined.set(currentFileData, header.length);
+        
+        let finalData = new Uint8Array(combined.length);
+        for (let i = 0; i < combined.length; i++) finalData[i] = combined[i] ^ key[i % key.length];
+        
+        let finalName = currentFileName.split('.')[0];
+        if (useGhostName) {
+            const randomID = Math.floor(1000000000 + Math.random() * 9000000000); // 10 random digits
+            finalName = `${randomID}_pp_file_by_kotakengine`;
+        }
+        
+        download(finalData, finalName + ".ppkotak");
+    }
+
+    function createKotak() {
+        const header = new TextEncoder().encode(SIGNATURE + detectedExt.padEnd(10));
+        let finalData = new Uint8Array(header.length + currentFileData.length);
+        finalData.set(header); finalData.set(currentFileData, header.length);
+        download(finalData, currentFileName.split('.')[0] + ".kotak");
+    }
+
+    function downloadOriginal() { download(currentFileData, currentFileName.split('.')[0] + detectedExt); }
+    
+    function download(data, name) {
+        const blob = new Blob([data], {type: "application/octet-stream"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob); link.download = name; link.click();
+    }
+</script>
+</body>
+</html>
