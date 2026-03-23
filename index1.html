@@ -48,7 +48,7 @@
             <button class="btn btn-blue" id="btnKotak" onclick="createKotak()">Vytvořit soubor .kotak</button>
             
             <div id="ppkotak-init">
-                <button class="btn btn-red" onclick="showPPKotakInput()">Vytvořit soubor .ppkotak</button>
+                <button class="btn btn-red" id="btnShowPP" onclick="showPPKotakInput()">Vytvořit soubor .ppkotak</button>
             </div>
             
             <div id="ppkotak-input" class="hidden action-group">
@@ -65,8 +65,8 @@
 
 <script>
     const SIGNATURE = "KOTAK_V2";
-    let rawFileData = null;      // Původní data z inputu
-    let currentFileData = null;  // Data po dešifrování/rozbalení
+    let rawFileData = null;
+    let currentFileData = null;
     let currentFileName = "";
     let detectedExt = ".bin";
 
@@ -91,7 +91,7 @@
     function showLockScreen() {
         const holder = document.getElementById('mediaHolder');
         holder.innerHTML = `<div class="lock-msg">SOUBOR JE ŠIFROVÁN</div><div class="lock-sub">technologií Kotak File Engine</div>`;
-        document.getElementById('file-info').innerText = `Uzamčený soubor: ${currentFileName}`;
+        document.getElementById('file-info').innerText = `Soubor: ${currentFileName}`;
         document.getElementById('unlock-zone').classList.remove('hidden');
         document.getElementById('action-zone').classList.add('hidden');
     }
@@ -110,11 +110,14 @@
             detectedExt = new TextDecoder().decode(decrypted.slice(0, 10)).trim();
             currentFileData = decrypted.slice(10);
             
-            // Kontrola jestli to dává smysl (pokud je první znak tečka, asi je heslo správně)
             if (!detectedExt.startsWith('.')) throw new Error();
 
             document.getElementById('unlock-zone').classList.add('hidden');
             document.getElementById('action-zone').classList.remove('hidden');
+            
+            // SKRÝT TLAČÍTKO PRO PPKOTAK, PROTOŽE UŽ JSME V NĚM
+            document.getElementById('ppkotak-init').classList.add('hidden');
+            
             showPreview(currentFileData, detectedExt);
         } catch (e) {
             alert("Špatné heslo nebo poškozený soubor!");
@@ -133,6 +136,8 @@
             currentFileData = rawFileData;
         }
         document.getElementById('action-zone').classList.remove('hidden');
+        // Ukážeme tlačítko pro PPKOTAK, pokud to není beton
+        document.getElementById('ppkotak-init').classList.remove('hidden');
         showPreview(currentFileData, detectedExt);
     }
 
@@ -155,7 +160,8 @@
         if (el) { el.src = url; el.className = 'media-content'; holder.appendChild(el); }
         else { holder.innerHTML = `<p>Náhled pro ${ext} není k dispozici</p>`; }
         
-        document.getElementById('file-info').innerText = `Soubor: ${currentFileName} (${ext})`;
+        // Zobrazení čistého jména souboru bez závorky
+        document.getElementById('file-info').innerText = `Soubor: ${currentFileName}`;
         document.getElementById('dlOriginal').innerText = `DOWNLOAD ORIGINAL (${ext.toUpperCase()})`;
     }
 
