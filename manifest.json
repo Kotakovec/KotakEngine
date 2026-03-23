@@ -1,6 +1,6 @@
 {
   "name": "KotakEngine",
-  "short_name": "Kotak",
+  "short_name": "KotakEngine",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#121212",
