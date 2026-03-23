@@ -2,145 +2,148 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KotakEngine</title>
+    <title>KotakEngine - Encrypter</title>
     <style>
-        /* Základní styl */
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+        body {
             font-family: sans-serif;
-            background-color: #121212;
+            background: #121212;
             color: white;
-            overflow: hidden;
-        }
-
-        /* Hlavní menu */
-        #main-menu {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
+            padding: 20px;
+            margin-top: 60px; /* Aby nebylo pod tím kulatým tlačítkem */
         }
-
-        .finta-card {
+        .box {
             background: #1e1e1e;
             padding: 20px;
-            margin: 10px;
             border-radius: 15px;
-            width: 80%;
-            max-width: 300px;
-            cursor: pointer;
-            transition: transform 0.2s;
             border: 1px solid #333;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
         }
-
-        .finta-card:hover {
-            transform: scale(1.05);
-            background: #252525;
-        }
-
-        /* WebView kontejner (iframe) */
-        #webview-container {
-            display: none; /* Schované, dokud se neklikne na fintu */
-            position: fixed;
-            top: 0;
-            left: 0;
+        input, button {
             width: 100%;
-            height: 100%;
-            background: white;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
             border: none;
+            box-sizing: border-box;
         }
-
-        /* Kulaté tlačítko ZPĚT */
-        #back-button {
-            position: fixed;
-            top: 20px;
-            left: -60px; /* Schované vlevo mimo obrazovku */
-            width: 50px;
-            height: 50px;
-            background-color: #ff4757;
+        input[type="text"], input[type="password"] {
+            background: #2a2a2a;
             color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+        }
+        button {
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            z-index: 999;
-            transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: none;
+            font-weight: bold;
+            transition: 0.3s;
         }
-
-        #back-button.visible {
-            left: 20px; /* Vyjede zleva */
-        }
+        .btn-encrypt { background: #4caf50; color: white; }
+        .btn-decrypt { background: #2196f3; color: white; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 0.9em; color: #aaa; }
     </style>
 </head>
 <body>
 
-    <div id="main-menu">
-        <h1>KotakEngine</h1>
-        <p>Vyber si fintu:</p>
+    <div class="box">
+        <h2>🔐 File Encrypter</h2>
+        <p>Zašifruj nebo dešifruj soubor</p>
         
-        <div class="finta-card" onclick="otevriFintu('https://www.wikipedia.org')">
-            <h3>Finta #1 (Příklad)</h3>
-            <p>Klikni pro otevření</p>
-        </div>
-
-        <div class="finta-card" onclick="otevriFintu('https://www.seznam.cz')">
-            <h3>Finta #2 (Příklad)</h3>
-            <p>Další super věc</p>
-        </div>
-    </div>
-
-    <button id="back-button" onclick="zpetDoMenu()">&#10094;</button>
-
-    <div id="webview-container">
-        <iframe id="finta-frame" src=""></iframe>
+        <input type="file" id="fileInput">
+        <input type="password" id="password" placeholder="Zadej silné heslo">
+        
+        <button class="btn-encrypt" onclick="processFile('encrypt')">Zašifrovat a stáhnout</button>
+        <button class="btn-decrypt" onclick="processFile('decrypt')">Dešifrovat a stáhnout</button>
+        
+        <div id="status">Připraveno.</div>
     </div>
 
     <script>
-        const mainMenu = document.getElementById('main-menu');
-        const webviewContainer = document.getElementById('webview-container');
-        const fintaFrame = document.getElementById('finta-frame');
-        const backButton = document.getElementById('back-button');
-
-        function otevriFintu(url) {
-            // Nastavíme URL do iFramu
-            fintaFrame.src = url;
-            
-            // Schováme menu a ukážeme WebView
-            mainMenu.style.display = 'none';
-            webviewContainer.style.display = 'block';
-            
-            // Animace tlačítka (vyjede zleva)
-            setTimeout(() => {
-                backButton.classList.add('visible');
-            }, 300);
+        // Funkce pro odvození šifrovacího klíče z hesla
+        async function getKlic(heslo, salt) {
+            const enc = new TextEncoder();
+            const baseKey = await crypto.subtle.importKey(
+                "raw", enc.encode(heslo), "PBKDF2", false, ["deriveKey"]
+            );
+            return crypto.subtle.deriveKey(
+                { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+                baseKey,
+                { name: "AES-GCM", length: 256 },
+                false, ["encrypt", "decrypt"]
+            );
         }
 
-        function zpetDoMenu() {
-            // Schováme tlačítko zpět
-            backButton.classList.remove('visible');
-            
-            // Po krátké pauze přepneme zobrazení
-            setTimeout(() => {
-                webviewContainer.style.display = 'none';
-                mainMenu.style.display = 'flex';
-                fintaFrame.src = ""; // Vyčistíme iframe
-            }, 300);
+        async function processFile(akce) {
+            const fileInput = document.getElementById('fileInput');
+            const password = document.getElementById('password').value;
+            const status = document.getElementById('status');
+
+            if (!fileInput.files[0] || !password) {
+                alert("Vyber soubor a zadej heslo!");
+                return;
+            }
+
+            status.innerText = "Pracuji...";
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    let resultBuffer;
+
+                    if (akce === 'encrypt') {
+                        // ŠIFROVÁNÍ
+                        const salt = crypto.getRandomValues(new Uint8Array(16));
+                        const iv = crypto.getRandomValues(new Uint8Array(12));
+                        const klic = await getKlic(password, salt);
+                        
+                        const encrypted = await crypto.subtle.encrypt(
+                            { name: "AES-GCM", iv: iv }, klic, data
+                        );
+
+                        // Spojíme Salt + IV + Data do jednoho souboru
+                        resultBuffer = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+                        resultBuffer.set(salt, 0);
+                        resultBuffer.set(iv, salt.length);
+                        resultBuffer.set(new Uint8Array(encrypted), salt.length + iv.length);
+                        
+                        saveFile(resultBuffer, file.name + ".locked");
+                    } else {
+                        // DEŠIFROVÁNÍ
+                        const salt = data.slice(0, 16);
+                        const iv = data.slice(16, 28);
+                        const encryptedData = data.slice(28);
+                        const klic = await getKlic(password, salt);
+
+                        const decrypted = await crypto.subtle.decrypt(
+                            { name: "AES-GCM", iv: iv }, klic, encryptedData
+                        );
+
+                        saveFile(new Uint8Array(decrypted), file.name.replace(".locked", ""));
+                    }
+                    status.innerText = "Hotovo!";
+                } catch (err) {
+                    console.error(err);
+                    status.innerText = "Chyba! Pravděpodobně špatné heslo.";
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function saveFile(data, fileName) {
+            const blob = new Blob([data], { type: "application/octet-stream" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
         }
     </script>
-
 </body>
 </html>
