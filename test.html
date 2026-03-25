@@ -35,9 +35,7 @@
             position: relative;
         }
 
-        #app-wrapper.slide-left {
-            transform: translateX(-100vw);
-        }
+        #app-wrapper.slide-left { transform: translateX(-100vw); }
 
         .page {
             width: 100vw;
@@ -70,7 +68,7 @@
             max-width: 400px;
         }
 
-        /* Styl kapsle - sjednocený pro všechna tlačítka */
+        /* Styl velké kapsle (File Encrypter) */
         .finta-card {
             background: rgba(22, 22, 22, 0.85); 
             backdrop-filter: blur(5px); 
@@ -79,43 +77,48 @@
             padding: 15px 25px;
             border-radius: 40px;
             cursor: pointer;
-            transition: transform 0.1s, background 0.2s;
+            transition: transform 0.1s, border-color 0.2s;
             border: 1px solid rgba(76, 175, 80, 0.3);
             position: relative;
             min-height: 60px;
-            box-sizing: border-box;
+        }
+
+        /* Kontejner pro tlačítka vedle sebe */
+        .row-container {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        /* Styl malých kapslí v řadě */
+        .small-card {
+            flex: 1; /* Rozdělí šířku 50/50 */
+            padding: 12px 15px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            min-height: 50px;
         }
 
         .finta-card:active {
             transform: scale(0.97);
-            background: rgba(76, 175, 80, 0.2);
-            border-color: #ff4757; /* Červená při stisknutí */
+            border-color: #ff4757;
         }
 
         .finta-card .emoji {
-            font-size: 24px;
-            position: absolute;
-            left: 25px;
+            font-size: 20px;
+            margin-right: 10px;
         }
 
         .finta-card h3 {
             margin: 0;
-            font-size: 1.1rem;
+            font-size: 1rem;
             width: 100%;
             text-align: center;
             font-weight: 500;
         }
 
-        #webview-page {
-            background: #000;
-            position: relative;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        #webview-page { background: #000; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
 
         #back-button {
             position: fixed;
@@ -130,16 +133,11 @@
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            cursor: pointer;
             z-index: 999;
             transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: none;
-            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
         }
-
         #back-button.visible { left: 15px; }
-
-        /* Footer odstraněn dle zadání */
     </style>
 </head>
 <body>
@@ -151,6 +149,10 @@
             <h1>KotakEngine</h1>
             <div class="grid" id="tlacitka-grid">
                 </div>
+            <div class="grid" style="margin-top: 15px;">
+                <div class="row-container" id="row-grid">
+                    </div>
+            </div>
         </div>
 
         <div class="page" id="webview-page">
@@ -159,20 +161,30 @@
     </div>
 
     <script>
-        // Rozšířený seznam o "Odeslat" a "Nastavení"
-        const seznamFint = [
-            { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" },
-            { nazev: "Odeslat / Přijmout", emoji: "📡", soubor: "nfc.html" },
+        // Rozdělení na hlavní a vedlejší tlačítka
+        const hlavníFinta = { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" };
+        const vedlejšíFinty = [
+            { nazev: "Odeslat", emoji: "📡", soubor: "nfc.html" },
             { nazev: "Nastavení", emoji: "⚙️", soubor: "settings.html" }
         ];
 
         const grid = document.getElementById('tlacitka-grid');
-        seznamFint.forEach(finta => {
+        const rowGrid = document.getElementById('row-grid');
+
+        // Vytvoření hlavního tlačítka
+        const mainCard = document.createElement('div');
+        mainCard.className = 'finta-card';
+        mainCard.onclick = () => otevriAplikaci(hlavníFinta.soubor);
+        mainCard.innerHTML = `<span class="emoji">${hlavníFinta.emoji}</span><h3>${hlavníFinta.nazev}</h3>`;
+        grid.appendChild(mainCard);
+
+        // Vytvoření tlačítek vedle sebe
+        vedlejšíFinty.forEach(finta => {
             const card = document.createElement('div');
-            card.className = 'finta-card';
+            card.className = 'finta-card small-card';
             card.onclick = () => otevriAplikaci(finta.soubor);
             card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
-            grid.appendChild(card);
+            rowGrid.appendChild(card);
         });
 
         const appWrapper = document.getElementById('app-wrapper');
@@ -180,11 +192,7 @@
         const backButton = document.getElementById('back-button');
 
         function otevriAplikaci(stranka) {
-            // Kontrola pro NFC parametry
-            const urlParams = new URLSearchParams(window.location.search);
-            const finalUrl = stranka + (window.location.search || "");
-            
-            appFrame.src = finalUrl;
+            appFrame.src = stranka + (window.location.search || "");
             appWrapper.classList.add('slide-left');
             setTimeout(() => { backButton.classList.add('visible'); }, 300);
         }
@@ -195,7 +203,7 @@
             setTimeout(() => { appFrame.src = ""; }, 500);
         }
 
-        /* --- ANIMACE POZADÍ (Zůstává beze změny) --- */
+        /* --- ANIMACE POZADÍ --- */
         var App = {};
         App.setup = function() {
             var canvas = document.createElement('canvas');
@@ -266,14 +274,6 @@
             App.move(); App.draw(); requestAnimationFrame(frame);
         }
         frame();
-
-        // Autostart pro NFC (pokud přijde uživatel z tagu)
-        window.onload = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('target')) {
-                otevriAplikaci('nfc.html');
-            }
-        };
     </script>
 </body>
 </html>
