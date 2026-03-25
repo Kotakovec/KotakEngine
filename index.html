@@ -77,7 +77,7 @@
             <div class="m-icon">🛠️</div>
             <h1 class="m-title">Údržba systému</h1>
             <p style="color: #888; font-size: 14px;">Právě probíhá aktualizace softwaru.</p>
-            <div id="maintenance-info" style="color: #555; font-size: 11px; margin-top: 10px;"></div>
+            <div id="maintenance-timer" style="color: #555; font-size: 12px; margin-top: 10px;">Synchronizace s databází...</div>
             <div class="loader-bar"><div id="progress-fill"></div></div>
         </div>
     </div>
@@ -101,39 +101,24 @@
             measurementId: "G-ZSM0GF21LL"
         };
 
-        // Inicializace Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Globální proměnné pro časy údržby
-        let startUdrzby = 0;
-        let konecUdrzby = 0;
+        let maintenanceStart = 0;
+        let maintenanceEnd = 0;
 
         const installScreen = document.getElementById('install-screen');
         const maintenanceOverlay = document.getElementById('maintenance-overlay');
         const mainAppContainer = document.getElementById('main-app-container');
         const mainFrame = document.getElementById('main-frame');
-        const btnInstall = document.getElementById('btn-install');
         const fill = document.getElementById('progress-fill');
-        const info = document.getElementById('maintenance-info');
+        const timerText = document.getElementById('maintenance-timer');
 
-        // Načtení dat z Firebase RTDB
-        const maintenanceRef = ref(db, 'settings/maintenance');
-        onValue(maintenanceRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                // Převedení ISO stringu z databáze na milisekundy
-                startUdrzby = new Date(data.startTime).getTime();
-                konecUdrzby = new Date(data.endTime).getTime();
-                console.log("Údržba nastavena od:", data.startTime, "do:", data.endTime);
-            }
-        });
-
-        function checkStatus() {
+        // FUNKCE PRO ROZHODNUTÍ, CO ZOBRAZIT
+        function updateUIVisibility() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const now = new Date().getTime();
 
-            // 1. Kontrola instalace
             if (!isStandalone) {
                 installScreen.style.display = "flex";
                 maintenanceOverlay.style.display = "none";
@@ -141,24 +126,22 @@
                 return;
             }
 
-            // 2. Kontrola údržby (pokud jsou časy načteny a jsme v intervalu)
-            if (startUdrzby > 0 && now >= startUdrzby && now < konecUdrzby) {
+            // Pokud máme časy a jsme v rozmezí údržby
+            if (maintenanceStart > 0 && now >= maintenanceStart && now < maintenanceEnd) {
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "none";
                 maintenanceOverlay.style.display = "flex";
 
                 if (mainFrame.src !== "") mainFrame.src = ""; 
 
-                // Progress Bar
-                const total = konecUdrzby - startUdrzby;
-                const elapsed = now - startUdrzby;
+                const total = maintenanceEnd - maintenanceStart;
+                const elapsed = now - maintenanceStart;
                 let percent = (elapsed / total) * 100;
                 fill.style.width = Math.min(percent, 100) + "%";
                 
-                info.innerText = "Končí v: " + new Date(konecUdrzby).toLocaleTimeString();
-
+                const remainSec = Math.round((maintenanceEnd - now) / 1000);
+                timerText.innerText = `Aktualizace skončí za cca ${remainSec}s`;
             } else {
-                // 3. Spuštění aplikace
                 installScreen.style.display = "none";
                 maintenanceOverlay.style.display = "none";
                 mainAppContainer.style.display = "block";
@@ -169,32 +152,37 @@
             }
         }
 
-        // Interval kontroly každou sekundu
-        setInterval(checkStatus, 1000);
+        // POSLUCHAČ DATABÁZE (Reaguje okamžitě na každou změnu v RTDB)
+        const maintenanceRef = ref(db, 'settings/maintenance');
+        onValue(maintenanceRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                maintenanceStart = new Date(data.startTime).getTime();
+                maintenanceEnd = new Date(data.endTime).getTime();
+                console.log("Data z DB aktualizována!");
+                updateUIVisibility(); // Přepočítat stav ihned po změně v DB
+            }
+        });
 
-        // PWA Instalace Logic
+        // SEKUNDOVÝ HLÍDAČ (Pro plynulý progress bar a časovač)
+        setInterval(updateUIVisibility, 1000);
+
+        // PWA instalace
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            btnInstall.style.display = 'block';
+            document.getElementById('btn-install').style.display = 'block';
         });
 
-        btnInstall.addEventListener('click', async () => {
+        document.getElementById('btn-install').addEventListener('click', () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt = null;
-                btnInstall.style.display = 'none';
             }
         });
 
-        // První kontrola
-        window.addEventListener('load', checkStatus);
-
-        // Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
-        }
+        window.addEventListener('load', updateUIVisibility);
     </script>
 </body>
 </html>
