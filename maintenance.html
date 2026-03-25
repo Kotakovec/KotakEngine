@@ -8,13 +8,13 @@
         :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
         body, html { margin: 0; padding: 0; height: 100%; background-color: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; }
         
-        /* Hlavní kontejner údržby */
         #maintenance-ui {
             display: flex; align-items: center; justify-content: center;
             height: 100vh; text-align: center; flex-direction: column;
+            width: 100%;
         }
 
-        .container { width: 85%; max-width: 400px; padding: 40px 30px; border: 1px solid #222; border-radius: 40px; background: var(--card-bg); }
+        .container { width: 85%; max-width: 400px; padding: 40px 30px; border: 1px solid #222; border-radius: 40px; background: var(--card-bg); box-sizing: border-box; }
         .icon { font-size: 50px; margin-bottom: 20px; }
         h1 { color: var(--primary); margin: 0 0 10px 0; font-size: 1.5rem; }
         p { color: #888; line-height: 1.6; margin-bottom: 5px; font-size: 14px; }
@@ -30,8 +30,7 @@
             box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
         }
 
-        /* Iframe pro přesměrování */
-        #app-frame { display: none; width: 100%; height: 100%; border: none; }
+        #app-frame { display: none; width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
     </style>
 </head>
 <body>
@@ -40,8 +39,8 @@
         <div class="container">
             <div class="icon">🛠️</div>
             <h1>Údržba systému</h1>
-            <p>Právě probíhá aktualizace KotakEngine.</p>
-            <p>Za malý okamžik budeme zpět.</p>
+            <p>Právě probíhá plánovaná aktualizace.</p>
+            <p>KotakEngine bude brzy zpět online.</p>
             
             <div class="loader-bar">
                 <div id="progress-fill"></div>
@@ -53,24 +52,27 @@
 
     <script>
         // ==========================================
-        //  ⚙️ NASTAVENÍ KONCE ÚDRŽBY (Změň tyto 3 hodnoty)
+        //  ⚙️ NASTAVENÍ ÚDRŽBY
         // ==========================================
-        const den = 26;       // Den (1-31)
-        const mesic = 3;      // Měsíc (1-12)
-        const casKonce = "00:00"; // Formát HH:MM (24h)
+        const den = 25;           // Den konání
+        const mesic = 3;          // Měsíc konání
+        
+        const casZacatku = "16:00"; // Kdy bar začíná na 0%
+        const casKonce = "18:00";   // Kdy bar dojede na 100%
         // ==========================================
 
         const progressFill = document.getElementById('progress-fill');
         const maintenanceUI = document.getElementById('maintenance-ui');
         const appFrame = document.getElementById('app-frame');
 
-        // Automatické sestavení data (rok se doplní sám)
         const rok = new Date().getFullYear();
-        const endString = `${rok}-${String(mesic).padStart(2, '0')}-${String(den).padStart(2, '0')}T${casKonce}:00`;
-        const endTime = new Date(endString).getTime();
         
-        // Začátek údržby (pro výpočet procent) - dáváme 30 minut před koncem jako výchozí bod pro bar
-        const startTime = endTime - (30 * 60 * 1000); 
+        // Sestavení strojového času
+        const startString = `${rok}-${String(mesic).padStart(2, '0')}-${String(den).padStart(2, '0')}T${casZacatku}:00`;
+        const endString = `${rok}-${String(mesic).padStart(2, '0')}-${String(den).padStart(2, '0')}T${casKonce}:00`;
+        
+        const startTime = new Date(startString).getTime();
+        const endTime = new Date(endString).getTime();
 
         function updateProgress() {
             const now = new Date().getTime();
@@ -79,18 +81,18 @@
             
             let percent = (elapsed / total) * 100;
             
+            // Ošetření limitů
             if (percent < 0) percent = 0;
             if (percent > 100) percent = 100;
 
             progressFill.style.width = percent + "%";
 
-            // KONTROLA DOKONČENÍ
+            // PŘEPNUTÍ PO KONCI
             if (percent >= 100) {
-                // Skryjeme údržbu a ukážeme index.html v iFramu
                 maintenanceUI.style.display = "none";
                 appFrame.style.display = "block";
                 appFrame.src = "index.html"; 
-                clearInterval(checkInterval); // Zastavíme smyčku
+                clearInterval(checkInterval);
             }
         }
 
