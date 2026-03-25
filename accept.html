@@ -3,36 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KotakEngine - Přijmout</title>
+    <title>KotakEngine - Accept</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #4caf50; --bg: #000; --card-bg: #121212; }
         body { 
             margin: 0; background: var(--bg); color: #fff; 
-            font-family: 'Segoe UI', sans-serif; 
+            font-family: sans-serif; 
             display: flex; align-items: center; justify-content: center; 
             height: 100vh; overflow: hidden;
         }
         .card { 
             background: var(--card-bg); border: 1px solid #333; 
-            border-radius: 30px; padding: 35px; width: 85%; 
+            border-radius: 30px; padding: 30px; width: 85%; 
             max-width: 350px; text-align: center; 
             box-shadow: 0 15px 50px rgba(0,0,0,0.8);
         }
         .btn { 
             background: var(--primary); color: #000; 
             text-decoration: none; padding: 18px; border-radius: 40px; 
-            display: block; font-weight: bold; margin-top: 25px; 
+            display: block; font-weight: bold; margin-top: 20px; 
             font-size: 1.1rem; transition: transform 0.1s;
         }
         .btn:active { transform: scale(0.95); }
+        
+        /* ZMENŠENÝ NÁHLED O 15% */
         #preview-img { 
-            max-width: 100%; border-radius: 15px; 
-            margin-top: 15px; display: none; border: 1px solid #333; 
+            max-width: 100%; 
+            max-height: 127px; /* Sníženo ze 150px na 127px */
+            border-radius: 12px; 
+            margin-top: 12px; 
+            display: none; border: 1px solid #333; 
         }
+
         #loader { color: #666; font-size: 14px; }
-        h2 { margin-top: 0; color: var(--primary); }
+        h2 { margin-top: 0; color: var(--primary); font-size: 1.4rem; }
+        #fname { font-weight: bold; word-break: break-all; font-size: 1.1rem; }
+        #fsize { color: #888; font-size: 11px; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -41,8 +49,8 @@
         
         <div id="content" style="display:none">
             <h2>Soubor přijat!</h2>
-            <div id="fname" style="font-weight:bold; word-break: break-all; font-size: 1.2rem;"></div>
-            <div id="fsize" style="color:#888; font-size:12px; margin-top:5px;"></div>
+            <div id="fname"></div>
+            <div id="fsize"></div>
             
             <img id="preview-img" src="">
             
@@ -51,7 +59,6 @@
     </div>
 
     <script>
-        // Úplná konfigurace pro jistotu
         const firebaseConfig = {
             apiKey: "AIzaSyBlgu2gdLYiAtqMlN2ABprU6rrXS-w5JfI",
             authDomain: "kotakengine.firebaseapp.com",
@@ -62,18 +69,15 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Získání ID z URL (?id=sid_xxx)
         const urlParams = new URLSearchParams(window.location.search);
         const senderId = urlParams.get('id');
 
         if (senderId) {
-            // Posloucháme změny v reálném čase
             const shareRef = db.ref('shares/' + senderId);
             
             shareRef.on('value', (snapshot) => {
                 const val = snapshot.val();
                 
-                // Kontrola, jestli soubor existuje, je aktivní a nevypršel čas
                 if (val && val.active && Date.now() < val.expires) {
                     document.getElementById('loader').style.display = "none";
                     document.getElementById('content').style.display = "block";
@@ -82,10 +86,9 @@
                     document.getElementById('fsize').innerText = (val.size / 1024).toFixed(1) + " KB";
                     
                     const downloadLink = document.getElementById('link');
-                    downloadLink.href = val.data; // Base64 data
+                    downloadLink.href = val.data;
                     downloadLink.download = val.name;
 
-                    // Pokud je to fotka, ukážeme náhled
                     if (val.type && val.type.startsWith('image/')) {
                         const img = document.getElementById('preview-img');
                         img.src = val.data;
@@ -95,14 +98,11 @@
                     }
                 } else {
                     document.getElementById('content').style.display = "none";
-                    document.getElementById('loader').innerText = "Žádný aktivní soubor nebyl nalezen nebo vypršela jeho platnost.";
+                    document.getElementById('loader').innerText = "Žádný aktivní soubor nebyl nalezen.";
                 }
-            }, (error) => {
-                console.error("Chyba Firebase:", error);
-                document.getElementById('loader').innerText = "Chyba při načítání databáze.";
             });
         } else {
-            document.getElementById('loader').innerText = "Chybí ID odesílatele v URL adrese.";
+            document.getElementById('loader').innerText = "Chybí ID odesílatele.";
         }
     </script>
 </body>
