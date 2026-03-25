@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Údržba | KotakEngine</title>
+    <style>
+        :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
+        body { 
+            margin: 0; background: var(--bg); color: #fff; 
+            font-family: sans-serif; display: flex; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center;
+        }
+        .container { width: 90%; max-width: 400px; padding: 30px; border: 1px solid #222; border-radius: 40px; background: var(--card-bg); }
+        .icon { font-size: 50px; margin-bottom: 20px; }
+        h1 { color: var(--primary); margin: 0 0 10px 0; }
+        p { color: #888; line-height: 1.6; margin-bottom: 0; }
+        .loader-bar { 
+            width: 100%; height: 4px; background: #222; 
+            margin-top: 25px; border-radius: 2px; overflow: hidden; 
+        }
+        .loader-progress { 
+            width: 40%; height: 100%; background: var(--primary); 
+            animation: loading 2s infinite ease-in-out; 
+        }
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(250%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🛠️</div>
+        <h1>Probíhá údržba</h1>
+        <p>Právě vylepšujeme jádro KotakEngine. Za chvíli budeme zpět v plné síle.</p>
+        <div class="loader-bar">
+            <div class="loader-progress"></div>
+        </div>
+    </div>
+</body>
+</html>
