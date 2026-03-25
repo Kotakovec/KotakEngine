@@ -77,6 +77,7 @@
             <div class="m-icon">🛠️</div>
             <h1 class="m-title">Údržba systému</h1>
             <p style="color: #888; font-size: 14px;">Právě probíhá aktualizace softwaru.</p>
+            <div id="maintenance-info" style="color: #555; font-size: 11px; margin-top: 10px;"></div>
             <div class="loader-bar"><div id="progress-fill"></div></div>
         </div>
     </div>
@@ -85,27 +86,54 @@
         <iframe id="main-frame" src=""></iframe>
     </div>
 
-    <script>
-        // ==========================================
-        //  ⚙️ NASTAVENÍ ČASU ÚDRŽBY
-        // ==========================================
-        const startUdrzby = new Date('2026-03-25T18:04:00').getTime(); 
-        const konecUdrzby  = new Date('2026-03-25T18:04:10').getTime(); 
-        // ==========================================
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        let deferredPrompt;
+        const firebaseConfig = {
+            apiKey: "AIzaSyBlgu2gdLYiAtqMlN2ABprU6rrXS-w5JfI",
+            authDomain: "kotakengine.firebaseapp.com",
+            databaseURL: "https://kotakengine-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "kotakengine",
+            storageBucket: "kotakengine.firebasestorage.app",
+            messagingSenderId: "165516964834",
+            appId: "1:165516964834:web:2d3089665eefa76d9bffbb",
+            measurementId: "G-ZSM0GF21LL"
+        };
+
+        // Inicializace Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Globální proměnné pro časy údržby
+        let startUdrzby = 0;
+        let konecUdrzby = 0;
+
         const installScreen = document.getElementById('install-screen');
         const maintenanceOverlay = document.getElementById('maintenance-overlay');
         const mainAppContainer = document.getElementById('main-app-container');
         const mainFrame = document.getElementById('main-frame');
         const btnInstall = document.getElementById('btn-install');
         const fill = document.getElementById('progress-fill');
+        const info = document.getElementById('maintenance-info');
+
+        // Načtení dat z Firebase RTDB
+        const maintenanceRef = ref(db, 'settings/maintenance');
+        onValue(maintenanceRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // Převedení ISO stringu z databáze na milisekundy
+                startUdrzby = new Date(data.startTime).getTime();
+                konecUdrzby = new Date(data.endTime).getTime();
+                console.log("Údržba nastavena od:", data.startTime, "do:", data.endTime);
+            }
+        });
 
         function checkStatus() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const now = new Date().getTime();
 
-            // Pokud nejsme na ploše, ukaž instalaci
+            // 1. Kontrola instalace
             if (!isStandalone) {
                 installScreen.style.display = "flex";
                 maintenanceOverlay.style.display = "none";
@@ -113,44 +141,39 @@
                 return;
             }
 
-            // Rozhodnutí: Údržba vs Aplikace
-            if (now >= startUdrzby && now < konecUdrzby) {
-                // REŽIM ÚDRŽBY
+            // 2. Kontrola údržby (pokud jsou časy načteny a jsme v intervalu)
+            if (startUdrzby > 0 && now >= startUdrzby && now < konecUdrzby) {
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "none";
                 maintenanceOverlay.style.display = "flex";
-                
-                // Resetujeme src, aby se appka načetla znovu po skončení
+
                 if (mainFrame.src !== "") mainFrame.src = ""; 
 
                 // Progress Bar
                 const total = konecUdrzby - startUdrzby;
                 const elapsed = now - startUdrzby;
                 let percent = (elapsed / total) * 100;
-                fill.style.width = percent + "%";
+                fill.style.width = Math.min(percent, 100) + "%";
+                
+                info.innerText = "Končí v: " + new Date(konecUdrzby).toLocaleTimeString();
 
             } else {
-                // REŽIM APLIKACE
+                // 3. Spuštění aplikace
                 installScreen.style.display = "none";
                 maintenanceOverlay.style.display = "none";
                 mainAppContainer.style.display = "block";
 
-                // Načtení main.html (pokud ještě není v iframu)
                 if (!mainFrame.src.includes("main.html")) {
                     mainFrame.src = "main.html?v=" + now;
                 }
             }
         }
 
-        // Hlídač času - běží každou sekundu
+        // Interval kontroly každou sekundu
         setInterval(checkStatus, 1000);
 
-        // Registrace Service Workeru
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
-        }
-
-        // Android Instalace
+        // PWA Instalace Logic
+        let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -165,8 +188,13 @@
             }
         });
 
-        // První kontrola při startu
+        // První kontrola
         window.addEventListener('load', checkStatus);
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
     </script>
 </body>
 </html>
