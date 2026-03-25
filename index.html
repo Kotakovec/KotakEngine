@@ -4,148 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KotakEngine</title>
-
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="logo.png">
 
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
     <style>
         :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
-        body, html { 
-            margin: 0; padding: 0; height: 100%; 
-            background-color: var(--bg); color: white; 
-            font-family: sans-serif; overflow: hidden; 
-        }
-
-        /* Sekce se překrývají, ovládáme je přes z-index a display */
-        .page-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: none; align-items: center; justify-content: center;
-            flex-direction: column; z-index: 10;
-        }
-
-        /* 1. INSTALACE */
-        .logo-img { 
-            width: 120px; height: 120px; border-radius: 25px; margin-bottom: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
-            background-image: url('logo.png'); background-size: cover; background-position: center; 
-        }
-        #btn-install { 
-            display: none; background: var(--primary); color: #000; border: none; 
-            padding: 18px 40px; border-radius: 30px; font-weight: bold; margin: 20px 0; 
-        }
-
-        /* 2. ÚDRŽBA */
-        .m-container { 
-            width: 85%; max-width: 400px; padding: 40px 30px; 
-            border: 1px solid #222; border-radius: 40px; background: #111; text-align: center;
-        }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
+        
+        .page-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 10; }
+        
+        /* ÚDRŽBA */
+        .m-container { width: 85%; max-width: 400px; padding: 40px 30px; border: 1px solid #222; border-radius: 40px; background: #111; text-align: center; }
         .loader-bar { width: 100%; height: 10px; background: #1a1a1a; margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #333; }
         #progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s linear; }
 
-        /* 3. APP IFRAME */
-        #app-layer { z-index: 5; display: block; } /* Iframe běží na pozadí */
+        /* APP */
+        #app-layer { z-index: 5; display: block; }
         iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
 
-    <div id="install-layer" class="page-layer">
-        <div class="logo-img"></div>
-        <h1>KotakEngine</h1>
-        <p style="color:#666">Přidej si aplikaci na plochu.</p>
-        <button id="btn-install" onclick="installPWA()">INSTALOVAT TEĎ</button>
-    </div>
-
     <div id="maintenance-layer" class="page-layer">
         <div class="m-container">
             <div style="font-size:50px">🛠️</div>
             <h1 style="color:var(--primary)">Údržba systému</h1>
-            <p style="color:#888">Probíhá aktualizace softwaru...</p>
+            <p id="m-text" style="color:#888">Probíhá aktualizace softwaru...</p>
             <div class="loader-bar"><div id="progress-fill"></div></div>
         </div>
     </div>
 
-    <div id="app-layer" class="page-layer" style="display:block;">
+    <div id="app-layer" class="page-layer">
         <iframe id="main-frame" src=""></iframe>
     </div>
 
     <script>
-        // === ⚙️ NASTAVENÍ ČASU (Nastav si teď testovací čas) ===
-        const startUdrzby = new Date('2026-03-25T18:19:00').getTime(); 
-        const konecUdrzby  = new Date('2026-03-25T19:00:00').getTime(); 
-        // =====================================================
-
-        const layers = {
-            install: document.getElementById('install-layer'),
-            maintenance: document.getElementById('maintenance-layer'),
-            app: document.getElementById('app-layer')
+        // --- ⚙️ TVŮJ FIREBASE CONFIG (Doplň svoje údaje) ---
+        const firebaseConfig = {
+            apiKey: "TVOJE_API_KEY",
+            authDomain: "TVŮJ_PROJEKT.firebaseapp.com",
+            databaseURL: "https://TVŮJ_PROJEKT-default-rtdb.firebaseio.com",
+            projectId: "TVŮJ_PROJEKT",
+            storageBucket: "TVŮJ_PROJEKT.appspot.com",
+            messagingSenderId: "ID",
+            appId: "APP_ID"
         };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        // --------------------------------------------------
+
+        const mLayer = document.getElementById('maintenance-layer');
+        const appLayer = document.getElementById('app-layer');
         const mainFrame = document.getElementById('main-frame');
         const fill = document.getElementById('progress-fill');
 
-        let currentMode = ""; 
+        let currentMode = "";
 
-        function updateSystem() {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            const now = Date.now();
+        // HLAVNÍ FUNKCE HLÍDÁNÍ
+        function syncMaintenance() {
+            // Cesta v databázi: /settings/maintenance
+            db.ref('settings/maintenance').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
 
-            // 1. Kontrola instalace
-            if (!isStandalone) {
-                showLayer('install');
-                return;
-            }
+                const now = Date.now();
+                const start = new Date(data.startTime).getTime(); // Formát: '2026-03-25T18:00:00'
+                const end = new Date(data.endTime).getTime();
 
-            // 2. Rozhodnutí Údržba vs App
-            if (now >= startUdrzby && now < konecUdrzby) {
-                showLayer('maintenance');
-                
-                // Progress Bar
-                const total = konecUdrzby - startUdrzby;
-                const elapsed = now - startUdrzby;
-                fill.style.width = Math.max(0, Math.min(100, (elapsed / total) * 100)) + "%";
-                
-                if (currentMode !== "maintenance") {
-                    currentMode = "maintenance";
-                    mainFrame.src = "about:blank"; // Zastavíme appku
+                if (now >= start && now < end) {
+                    // JE ÚDRŽBA
+                    mLayer.style.display = "flex";
+                    appLayer.style.display = "none";
+                    
+                    // Progress Bar
+                    const total = end - start;
+                    const elapsed = now - start;
+                    fill.style.width = Math.max(0, Math.min(100, (elapsed / total) * 100)) + "%";
+
+                    if (currentMode !== "maintenance") {
+                        currentMode = "maintenance";
+                        mainFrame.src = "about:blank";
+                    }
+                } else {
+                    // BĚŽNÝ PROVOZ
+                    mLayer.style.display = "none";
+                    appLayer.style.display = "block";
+
+                    if (currentMode !== "app") {
+                        currentMode = "app";
+                        mainFrame.src = "main.html?v=" + now;
+                    }
                 }
-            } else {
-                showLayer('app');
-                
-                if (currentMode !== "app") {
-                    currentMode = "app";
-                    mainFrame.src = "main.html?v=" + now;
-                }
-            }
-        }
-
-        function showLayer(key) {
-            Object.keys(layers).forEach(k => {
-                layers[k].style.display = (k === key) ? "flex" : "none";
             });
-            if (key === 'app') layers.app.style.display = "block";
         }
 
-        // Instalace
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('btn-install').style.display = 'block';
-        });
+        // Spustit synchronizaci
+        syncMaintenance();
 
-        async function installPWA() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt = null;
-            }
-        }
-
-        // Smyčka hlídače (každou sekundu)
-        setInterval(updateSystem, 1000);
-        updateSystem();
+        // Každou minutu refreshni progres bar, kdyby uživatel nechal appku otevřenou
+        setInterval(syncMaintenance, 30000);
     </script>
 </body>
 </html>
