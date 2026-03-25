@@ -1,1 +1,34 @@
-error
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>404 - Nenalezeno | KotakEngine</title>
+    <style>
+        :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
+        body { 
+            margin: 0; background: var(--bg); color: #fff; 
+            font-family: sans-serif; display: flex; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center;
+        }
+        .container { width: 90%; max-width: 400px; }
+        .error-code { font-size: 80px; font-weight: bold; color: var(--primary); margin: 0; }
+        h1 { margin: 10px 0; font-size: 1.5rem; }
+        p { color: #666; margin-bottom: 30px; line-height: 1.5; }
+        .btn-home { 
+            background: var(--primary); color: #000; text-decoration: none; 
+            padding: 15px 30px; border-radius: 30px; font-weight: bold; 
+            display: inline-block; transition: transform 0.2s;
+        }
+        .btn-home:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-code">404</div>
+        <h1>Stránka neexistuje</h1>
+        <p>Tato cesta v systému KotakEngine nebyla nalezena. Pravděpodobně došlo k chybě v odkazu.</p>
+        <a href="index.html" class="btn-home">ZPĚT DO SYSTÉMU</a>
+    </div>
+</body>
+</html>
