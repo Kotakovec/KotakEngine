@@ -4,81 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KotakEngine</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
+
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
-        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
-        
-        /* Styl pro údržbovou kartu (vložená přímo, aby to bylo bleskové) */
-        #maintenance-overlay {
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            height: 100vh; background: #000; color: white; text-align: center;
+        :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            background-color: var(--bg); color: white; 
+            font-family: sans-serif; overflow: hidden; 
         }
-        .container { 
-            width: 85%; max-width: 400px; padding: 40px 30px; 
-            border: 1px solid #222; border-radius: 40px; background: #111; 
+
+        #install-screen { 
+            display: none; flex-direction: column; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center; 
+            padding: 30px; box-sizing: border-box; 
         }
-        .icon { font-size: 50px; margin-bottom: 20px; }
-        h1 { color: #4caf50; margin: 0 0 10px 0; font-size: 1.5rem; }
-        p { color: #888; font-size: 14px; }
-        .loader-bar { width: 100%; height: 10px; background: #1a1a1a; margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #333; }
-        #progress-fill { width: 0%; height: 100%; background: #4caf50; transition: width 0.5s linear; box-shadow: 0 0 20px rgba(76, 175, 80, 0.5); }
+
+        .logo-img { 
+            width: 120px; height: 120px; border-radius: 25px; 
+            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+            background-image: url('logo.png'); background-size: cover; background-position: center; 
+        }
+
+        #btn-install { 
+            display: none; background: var(--primary); color: #000; 
+            border: none; padding: 18px 40px; border-radius: 30px; 
+            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; 
+        }
+
+        .instruction-box { 
+            background: var(--card-bg); padding: 20px; border-radius: 20px; 
+            border: 1px solid #222; max-width: 320px; font-size: 13px; color: #888; 
+        }
+
+        #main-app-container { display: none; width: 100%; height: 100%; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
 
-    <div id="maintenance-overlay">
-        <div class="container">
-            <div class="icon">🛠️</div>
-            <h1>Údržba systému</h1>
-            <p>Právě probíhá aktualizace softwaru.</p>
-            <div class="loader-bar"><div id="progress-fill"></div></div>
+    <div id="install-screen">
+        <div class="logo-img"></div>
+        <h1 style="margin-bottom: 5px;">KotakEngine</h1>
+        <p style="color: #666; margin-top: 0;">Aplikace vyžaduje spuštění z plochy.</p>
+
+        <button id="btn-install">INSTALOVAT TEĎ</button>
+
+        <div class="instruction-box">
+            <b style="color: #fff;">iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
+            <b style="color: #fff;">Android:</b> Klepni na tři tečky a zvol "Instalovat aplikaci".
         </div>
     </div>
 
-    <iframe id="main-frame" src=""></iframe>
+    <div id="main-app-container">
+        <iframe id="main-frame" src=""></iframe>
+    </div>
 
     <script>
-        // ==========================================
-        //  ⚙️ NASTAVENÍ (Tady měň časy)
-        // ==========================================
-        const startUdrzby = new Date('2026-03-25T17:50:00').getTime(); 
-        const konecUdrzby  = new Date('2026-03-25T17:53:00').getTime(); 
-        // ==========================================
+        // === ⚙️ NASTAVENÍ ČASU ÚDRŽBY (RRRR-MM-DD HH:MM:SS) ===
+        const zacatekUdrzby = new Date('2026-03-25T17:00:00').getTime();
+        const konecUdrzby    = new Date('2026-03-26T00:00:00').getTime();
+        // =====================================================
 
-        const frame = document.getElementById('main-frame');
-        const overlay = document.getElementById('maintenance-overlay');
-        const fill = document.getElementById('progress-fill');
+        let deferredPrompt;
+        const installScreen = document.getElementById('install-screen');
+        const mainAppContainer = document.getElementById('main-app-container');
+        const mainFrame = document.getElementById('main-frame');
+        const btnInstall = document.getElementById('btn-install');
 
-        function checkSystem() {
+        function initApp() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const now = new Date().getTime();
 
-            // Pokud jsme v časovém okně údržby
-            if (now >= startUdrzby && now < konecUdrzby) {
-                overlay.style.display = "flex";
-                frame.style.display = "none";
-                frame.src = ""; // Vyčistíme iframe
+            if (isStandalone) {
+                installScreen.style.display = "none";
+                mainAppContainer.style.display = "block";
 
-                // Výpočet progresu pro bar
-                const total = konecUdrzby - startUdrzby;
-                const elapsed = now - startUdrzby;
-                let percent = (elapsed / total) * 100;
-                fill.style.width = percent + "%";
+                // LOGIKA PŘEPÍNÁNÍ: Údržba vs. Samotná aplikace
+                if (now >= zacatekUdrzby && now < konecUdrzby) {
+                    // PRÁVĚ PROBÍHÁ ÚDRŽBA
+                    mainFrame.src = "maintenance.html?v=" + now;
+                    console.log("🛠️ Zobrazen režim údržby.");
+                } else {
+                    // SYSTÉM BĚŽÍ NORMÁLNĚ
+                    mainFrame.src = "main.html?v=" + now;
+                    console.log("🚀 Načten dashboard.");
+                }
 
             } else {
-                // Pokud údržba není nebo už skončila
-                overlay.style.display = "none";
-                frame.style.display = "block";
-                
-                // Načteme main.html jen pokud už tam není
-                if (!frame.src.includes("main.html")) {
-                    frame.src = "main.html?v=" + now;
-                }
+                installScreen.style.display = "flex";
+                mainAppContainer.style.display = "none";
             }
         }
 
-        // Kontrola každou sekundu, aby se to přeplo samo hned vteřinu po skončení
-        setInterval(checkSystem, 1000);
-        checkSystem();
+        // Instalace (Android)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            btnInstall.style.display = 'block';
+        });
+
+        btnInstall.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+                btnInstall.style.display = 'none';
+            }
+        });
+
+        // Kontrola hned po načtení index.html
+        window.addEventListener('load', initApp);
     </script>
 </body>
 </html>
