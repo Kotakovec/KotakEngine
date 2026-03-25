@@ -4,202 +4,198 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KotakEngine</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
+
     <style>
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            background-color: #000; color: #ffffff;
-            overflow: hidden; -webkit-tap-highlight-color: transparent;
+        :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            background-color: var(--bg); color: white; 
+            font-family: sans-serif; overflow: hidden; 
         }
 
-        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-
-        #app-wrapper {
-            display: flex; width: 200vw; height: 100vh;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 5; position: relative;
+        /* 1. INSTALAČNÍ OBRAZOVKA */
+        #install-screen { 
+            display: none; flex-direction: column; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center; 
+            padding: 30px; box-sizing: border-box; 
         }
-        #app-wrapper.slide-left { transform: translateX(-100vw); }
-
-        .page { width: 100vw; height: 100vh; flex-shrink: 0; box-sizing: border-box; display: flex; flex-direction: column; }
-
-        #main-menu { padding: 40px 20px 20px 20px; background: rgba(0, 0, 0, 0.4); }
-
-        h1 {
-            font-size: 2.5rem; margin-bottom: 30px; color: #4caf50;
-            text-shadow: 0 0 20px rgba(76, 175, 80, 0.6); text-align: center;
+        .logo-img { 
+            width: 120px; height: 120px; border-radius: 25px; 
+            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+            background-image: url('logo.png'); background-size: cover; background-position: center; 
+        }
+        #btn-install { 
+            display: none; background: var(--primary); color: #000; 
+            border: none; padding: 18px 40px; border-radius: 30px; 
+            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; 
+        }
+        .instruction-box { 
+            background: var(--card-bg); padding: 20px; border-radius: 20px; 
+            border: 1px solid #222; max-width: 320px; font-size: 13px; color: #888; 
         }
 
-        .top-section { flex-grow: 1; display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; margin: 0 auto; }
-        .bottom-section { width: 100%; max-width: 400px; margin: 0 auto 10px auto; display: flex; gap: 12px; }
-
-        .finta-card {
-            background: rgba(22, 22, 22, 0.85); backdrop-filter: blur(5px);
-            display: flex; align-items: center; padding: 15px 25px;
-            border-radius: 40px; cursor: pointer; transition: transform 0.1s, border-color 0.2s;
-            border: 1px solid rgba(76, 175, 80, 0.3); position: relative; min-height: 60px; box-sizing: border-box;
+        /* 2. ÚDRŽBOVÁ OBRAZOVKA */
+        #maintenance-overlay {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; background: #000; color: white; text-align: center;
         }
-        .finta-card:active { transform: scale(0.97); border-color: #ff4757; }
-        .small-card { flex: 1; padding: 12px 10px; border-radius: 30px; min-height: 55px; }
-        .finta-card .emoji { font-size: 22px; margin-right: 12px; }
-        .finta-card h3 { margin: 0; font-size: 1rem; width: 100%; text-align: center; font-weight: 500; }
-        .small-card h3 { font-size: 0.85rem; }
+        .m-container { 
+            width: 85%; max-width: 400px; padding: 40px 30px; 
+            border: 1px solid #222; border-radius: 40px; background: #111; 
+        }
+        .m-icon { font-size: 50px; margin-bottom: 20px; }
+        .m-title { color: var(--primary); margin: 0 0 10px 0; font-size: 1.5rem; }
+        .loader-bar { width: 100%; height: 10px; background: #1a1a1a; margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #333; }
+        #progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s linear; box-shadow: 0 0 20px rgba(76, 175, 80, 0.5); }
 
-        #webview-page { background: #000; position: relative; }
+        /* 3. HLAVNÍ APP KONTEJNER */
+        #main-app-container { display: none; width: 100%; height: 100%; }
         iframe { width: 100%; height: 100%; border: none; }
-
-        #back-button {
-            position: fixed; top: 15px; left: -70px; width: 55px; height: 55px;
-            background-color: #4caf50; color: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; z-index: 999;
-            transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: none;
-        }
-        #back-button.visible { left: 15px; }
     </style>
 </head>
 <body>
 
-    <button id="back-button" onclick="zpetDoMenu()">&#10094;</button>
-
-    <div id="app-wrapper">
-        <div class="page" id="main-menu">
-            <h1>KotakEngine</h1>
-            <div class="top-section" id="top-grid"></div>
-            <div class="bottom-section" id="bottom-grid"></div>
-        </div>
-
-        <div class="page" id="webview-page">
-            <iframe id="app-frame" src=""></iframe>
+    <div id="install-screen">
+        <div class="logo-img"></div>
+        <h1 style="margin-bottom: 5px;">KotakEngine</h1>
+        <p style="color: #666; margin-top: 0;">Aplikace vyžaduje spuštění z plochy.</p>
+        <button id="btn-install">INSTALOVAT TEĎ</button>
+        <div class="instruction-box">
+            <b style="color: #fff;">iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
+            <b style="color: #fff;">Android:</b> Klepni na tři tečky a zvol "Instalovat aplikaci".
         </div>
     </div>
 
-    <script>
-        const horniFinty = [
-            { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" },
-            { nazev: "In maintenance", emoji: "❌️", soubor: "404.html" },
-            { nazev: "Coming soon", emoji: "❔️", soubor: "404.html" }
-        ];
+    <div id="maintenance-overlay">
+        <div class="m-container">
+            <div class="m-icon">🛠️</div>
+            <h1 class="m-title">Údržba systému</h1>
+            <p style="color: #888; font-size: 14px;">Právě probíhá aktualizace softwaru.</p>
+            <div id="maintenance-timer" style="color: #555; font-size: 12px; margin-top: 10px;">Synchronizace s databází...</div>
+            <div class="loader-bar"><div id="progress-fill"></div></div>
+        </div>
+    </div>
 
-        const spodniFinty = [
-            { nazev: "Odeslat", emoji: "📤", soubor: "send.html" },
-            // Tady je ta změna: direct: true zajistí přesměrování celého webu
-            { nazev: "Nastavení", emoji: "⚙️", soubor: "settings.html", direct: true }
-        ];
+    <div id="main-app-container">
+        <iframe id="main-frame" src=""></iframe>
+    </div>
 
-        const topGrid = document.getElementById('top-grid');
-        const bottomGrid = document.getElementById('bottom-grid');
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        horniFinty.forEach(finta => {
-            const card = document.createElement('div');
-            card.className = 'finta-card';
-            card.onclick = () => otevriAplikaci(finta);
-            card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
-            topGrid.appendChild(card);
-        });
+        const firebaseConfig = {
+            apiKey: "AIzaSyBlgu2gdLYiAtqMlN2ABprU6rrXS-w5JfI",
+            authDomain: "kotakengine.firebaseapp.com",
+            databaseURL: "https://kotakengine-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "kotakengine",
+            storageBucket: "kotakengine.firebasestorage.app",
+            messagingSenderId: "165516964834",
+            appId: "1:165516964834:web:2d3089665eefa76d9bffbb",
+            measurementId: "G-ZSM0GF21LL"
+        };
 
-        spodniFinty.forEach(finta => {
-            const card = document.createElement('div');
-            card.className = 'finta-card small-card';
-            card.onclick = () => otevriAplikaci(finta);
-            card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
-            bottomGrid.appendChild(card);
-        });
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-        const appWrapper = document.getElementById('app-wrapper');
-        const appFrame = document.getElementById('app-frame');
-        const backButton = document.getElementById('back-button');
+        let maintenanceStart = 0;
+        let maintenanceEnd = 0;
+        let currentAppMode = ""; // Sleduje, co zrovna běží ("main" nebo "accept")
 
-        function otevriAplikaci(finta) {
-            // Pokud je nastaveno direct: true, přesměruje se celý prohlížeč
-            if (finta.direct) {
-                window.location.href = finta.soubor + (window.location.search || "");
+        const installScreen = document.getElementById('install-screen');
+        const maintenanceOverlay = document.getElementById('maintenance-overlay');
+        const mainAppContainer = document.getElementById('main-app-container');
+        const mainFrame = document.getElementById('main-frame');
+        const fill = document.getElementById('progress-fill');
+        const timerText = document.getElementById('maintenance-timer');
+
+        function updateUIVisibility() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const now = new Date().getTime();
+
+            if (!isStandalone) {
+                installScreen.style.display = "flex";
+                maintenanceOverlay.style.display = "none";
+                mainAppContainer.style.display = "none";
                 return;
             }
-            
-            // Jinak se otevře v iFramu se slidovacím efektem
-            appFrame.src = finta.soubor + (window.location.search || "");
-            appWrapper.classList.add('slide-left');
-            setTimeout(() => { backButton.classList.add('visible'); }, 300);
-        }
 
-        function zpetDoMenu() {
-            backButton.classList.remove('visible');
-            appWrapper.classList.remove('slide-left');
-            setTimeout(() => { appFrame.src = ""; }, 500);
-        }
+            // REŽIM ÚDRŽBY
+            if (maintenanceStart > 0 && now >= maintenanceStart && now < maintenanceEnd) {
+                installScreen.style.display = "none";
+                mainAppContainer.style.display = "none";
+                maintenanceOverlay.style.display = "flex";
 
-        /* --- ANIMACE POZADÍ --- */
-        var App = {};
-        App.setup = function() {
-            var canvas = document.createElement('canvas');
-            this.canvas = canvas; document.body.appendChild(canvas);
-            this.ctx = this.canvas.getContext('2d');
-            this.onResize();
-            this.stepCount = 0; this.particles = []; this.lifespan = 1000;
-            this.maxPop = 200; this.birthFreq = 2; this.gridSize = 10;
-            this.gridSteps = Math.floor(1000 / this.gridSize);
-            this.grid = [];
-            for (var xx = -500; xx < 500; xx += this.gridSize) {
-                for (var yy = -500; yy < 500; yy += this.gridSize) {
-                    var r = Math.sqrt(xx*xx+yy*yy), r0 = 100, field;
-                    if (r < r0) field = 255 / r0 * r;
-                    else field = 255 - Math.min(255, (r - r0)/2);
-                    this.grid.push({x: xx, y: yy, busyAge: 0, spotIndex: this.grid.length, field: field});
+                if (mainFrame.src !== "") mainFrame.src = ""; 
+                currentAppMode = "";
+
+                const total = maintenanceEnd - maintenanceStart;
+                const elapsed = now - maintenanceStart;
+                let percent = (elapsed / total) * 100;
+                fill.style.width = Math.min(percent, 100) + "%";
+
+                const remainSec = Math.round((maintenanceEnd - now) / 1000);
+                timerText.innerText = remainSec > 0 ? `Aktualizace skončí za cca ${remainSec}s` : "Dokončování...";
+            } 
+            // REŽIM BĚŽNÉHO PROVOZU
+            else {
+                installScreen.style.display = "none";
+                maintenanceOverlay.style.display = "none";
+                mainAppContainer.style.display = "block";
+
+                // Kontrola parametrů v URL (např. ?id=sid_...)
+                const urlParams = new URLSearchParams(window.location.search);
+                const shareId = urlParams.get('id');
+
+                if (shareId) {
+                    // Pokud máme ID, jdeme na accept.html
+                    if (currentAppMode !== "accept") {
+                        currentAppMode = "accept";
+                        mainFrame.src = "accept.html?id=" + shareId;
+                    }
+                } else {
+                    // Jinak jdeme na klasické menu
+                    if (currentAppMode !== "main") {
+                        currentAppMode = "main";
+                        mainFrame.src = "main.html?v=" + now;
+                    }
                 }
             }
-        };
-        App.onResize = function() {
-            this.width = this.canvas.width = window.innerWidth;
-            this.height = this.canvas.height = window.innerHeight;
-            this.xC = this.width / 2; this.yC = this.height / 2;
-        };
-        App.birth = function() {
-            var gridSpotIndex = Math.floor(Math.random() * this.grid.length);
-            var gridSpot = this.grid[gridSpotIndex];
-            this.particles.push({
-                hue: 120, sat: 70, lum: 40,
-                x: gridSpot.x, y: gridSpot.y, xLast: gridSpot.x, yLast: gridSpot.y,
-                xSpeed: 0, ySpeed: 0, age: 0, ageSinceStuck: 0,
-                attractor: { oldIndex: gridSpotIndex, gridSpotIndex: gridSpotIndex },
-                name: 'p' + Math.random()
-            });
-        };
-        App.move = function() {
-            for (var i = this.particles.length - 1; i >= 0; i--) {
-                var p = this.particles[i]; p.xLast = p.x; p.yLast = p.y;
-                var index = p.attractor.gridSpotIndex; var gridSpot = this.grid[index];
-                if (Math.random() < 0.5) {
-                    var neighbors = [index-1, index+1, index-this.gridSteps, index+this.gridSteps];
-                    var best = gridSpot;
-                    neighbors.forEach(idx => { if (this.grid[idx] && this.grid[idx].field > best.field) best = this.grid[idx]; });
-                    if (best.busyAge == 0) { p.ageSinceStuck = 0; p.attractor.oldIndex = index; p.attractor.gridSpotIndex = best.spotIndex; best.busyAge = 1; }
-                    else p.ageSinceStuck++;
-                }
-                var k = 8, visc = visc = 0.4;
-                p.xSpeed = (p.xSpeed + (gridSpot.x - p.x) * k) * visc;
-                p.ySpeed = (p.ySpeed + (gridSpot.y - p.y) * k) * visc;
-                p.x += 0.05 * p.xSpeed; p.y += 0.05 * p.ySpeed;
-                p.age++; if (p.age > this.lifespan || p.ageSinceStuck > 10) this.particles.splice(i, 1);
-            }
-        };
-        App.draw = function() {
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-            this.ctx.fillRect(0, 0, this.width, this.height);
-            this.particles.forEach(p => {
-                var lx = this.xC + p.xLast * 1.5, ly = this.yC + p.yLast * 1.5;
-                var nx = this.xC + p.x * 1.5, ny = this.yC + p.y * 1.5;
-                this.ctx.beginPath(); this.ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.lum}%, 1)`;
-                this.ctx.moveTo(lx, ly); this.ctx.lineTo(nx, ny); this.ctx.stroke();
-            });
-        };
-        window.addEventListener('resize', () => App.onResize());
-        App.setup();
-        function frame() {
-            App.stepCount++; if (App.stepCount % App.birthFreq == 0 && App.particles.length < App.maxPop) App.birth();
-            App.move(); App.draw(); requestAnimationFrame(frame);
         }
-        frame();
+
+        const maintenanceRef = ref(db, 'settings/maintenance');
+        onValue(maintenanceRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                maintenanceStart = new Date(data.startTime).getTime();
+                maintenanceEnd = new Date(data.endTime).getTime();
+                updateUIVisibility();
+            }
+        });
+
+        setInterval(updateUIVisibility, 1000);
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('btn-install').style.display = 'block';
+        });
+
+        document.getElementById('btn-install').addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+            }
+        });
+
+        window.addEventListener('load', updateUIVisibility);
     </script>
 </body>
 </html>
