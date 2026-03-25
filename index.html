@@ -106,6 +106,7 @@
 
         let maintenanceStart = 0;
         let maintenanceEnd = 0;
+        let currentAppMode = ""; // Sleduje, co zrovna běží ("main" nebo "accept")
 
         const installScreen = document.getElementById('install-screen');
         const maintenanceOverlay = document.getElementById('maintenance-overlay');
@@ -114,7 +115,6 @@
         const fill = document.getElementById('progress-fill');
         const timerText = document.getElementById('maintenance-timer');
 
-        // FUNKCE PRO ROZHODNUTÍ, CO ZOBRAZIT
         function updateUIVisibility() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const now = new Date().getTime();
@@ -126,48 +126,61 @@
                 return;
             }
 
-            // Pokud máme časy a jsme v rozmezí údržby
+            // REŽIM ÚDRŽBY
             if (maintenanceStart > 0 && now >= maintenanceStart && now < maintenanceEnd) {
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "none";
                 maintenanceOverlay.style.display = "flex";
 
                 if (mainFrame.src !== "") mainFrame.src = ""; 
+                currentAppMode = "";
 
                 const total = maintenanceEnd - maintenanceStart;
                 const elapsed = now - maintenanceStart;
                 let percent = (elapsed / total) * 100;
                 fill.style.width = Math.min(percent, 100) + "%";
-                
+
                 const remainSec = Math.round((maintenanceEnd - now) / 1000);
-                timerText.innerText = `Aktualizace skončí za cca ${remainSec}s`;
-            } else {
+                timerText.innerText = remainSec > 0 ? `Aktualizace skončí za cca ${remainSec}s` : "Dokončování...";
+            } 
+            // REŽIM BĚŽNÉHO PROVOZU
+            else {
                 installScreen.style.display = "none";
                 maintenanceOverlay.style.display = "none";
                 mainAppContainer.style.display = "block";
 
-                if (!mainFrame.src.includes("main.html")) {
-                    mainFrame.src = "main.html?v=" + now;
+                // Kontrola parametrů v URL (např. ?id=sid_...)
+                const urlParams = new URLSearchParams(window.location.search);
+                const shareId = urlParams.get('id');
+
+                if (shareId) {
+                    // Pokud máme ID, jdeme na accept.html
+                    if (currentAppMode !== "accept") {
+                        currentAppMode = "accept";
+                        mainFrame.src = "accept.html?id=" + shareId;
+                    }
+                } else {
+                    // Jinak jdeme na klasické menu
+                    if (currentAppMode !== "main") {
+                        currentAppMode = "main";
+                        mainFrame.src = "main.html?v=" + now;
+                    }
                 }
             }
         }
 
-        // POSLUCHAČ DATABÁZE (Reaguje okamžitě na každou změnu v RTDB)
         const maintenanceRef = ref(db, 'settings/maintenance');
         onValue(maintenanceRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 maintenanceStart = new Date(data.startTime).getTime();
                 maintenanceEnd = new Date(data.endTime).getTime();
-                console.log("Data z DB aktualizována!");
-                updateUIVisibility(); // Přepočítat stav ihned po změně v DB
+                updateUIVisibility();
             }
         });
 
-        // SEKUNDOVÝ HLÍDAČ (Pro plynulý progress bar a časovač)
         setInterval(updateUIVisibility, 1000);
 
-        // PWA instalace
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
