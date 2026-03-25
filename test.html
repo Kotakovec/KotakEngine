@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KotakEngine - Send</title>
+    <title>KotakEngine - Sdílení</title>
     <style>
         :root {
             --primary: #4caf50;
@@ -22,157 +22,156 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
         .container {
             width: 90%;
             max-width: 400px;
-            padding-top: 40px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            text-align: center;
+            z-index: 10;
         }
 
-        h2 { color: var(--primary); text-align: center; margin-bottom: 10px; }
+        h2 { color: var(--primary); margin-bottom: 30px; }
 
-        /* 1. VÝBĚR SOUBORU */
-        .upload-area {
+        /* Zóna pro výběr souboru */
+        .upload-box {
             background: var(--card-bg);
             border: 2px dashed #333;
-            border-radius: 25px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        /* 2. PREVIEW (NÁHLED) */
-        #preview-zone {
-            display: none; /* Ukáže se až po výběru */
-            background: #1a1a1a;
             border-radius: 20px;
-            padding: 20px;
-            border: 1px solid #333;
-            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: border-color 0.3s;
         }
 
-        #preview-img {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            display: none;
+        .upload-box.active { border-color: var(--primary); }
+
+        .file-info {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #888;
         }
 
-        .file-meta { font-size: 0.9rem; color: #aaa; }
-
-        /* 3. TLAČÍTKO ODESLAT (KAPSLE) */
-        .btn-send {
+        /* Tlačítko Sdílet (Kapsle) */
+        .btn-capsule {
             background: var(--primary);
-            color: black;
+            color: white;
             border: none;
-            padding: 18px;
+            padding: 15px 40px;
             border-radius: 40px;
             font-weight: bold;
             font-size: 1.1rem;
-            cursor: pointer;
             width: 100%;
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.2);
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
             transition: transform 0.1s;
         }
 
-        .btn-send:active { transform: scale(0.96); }
-        .btn-send:disabled { background: #333; color: #666; }
+        .btn-capsule:active { transform: scale(0.96); }
+        .btn-capsule:disabled { background: #333; color: #666; cursor: not-allowed; }
 
-        /* 4. PLOVOUCÍ TLAČÍTKO UKONČIT (Stejné jako v main.html) */
+        /* Plovoucí tlačítko UKONČIT (shodné s tlačítkem zpět) */
         #stop-button {
             position: fixed;
-            top: 15px;
-            left: -150px; /* Schované vlevo */
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
             background-color: var(--error);
             color: white;
             border: none;
-            padding: 12px 20px;
+            padding: 12px 25px;
             border-radius: 30px;
             font-weight: bold;
             font-size: 14px;
             z-index: 999;
             box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
             cursor: pointer;
-            transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: none; /* Ukáže se až při sdílení */
         }
 
-        #stop-button.visible { left: 15px; }
+        #stop-button.visible { display: block; }
 
         input[type="file"] { display: none; }
     </style>
 </head>
 <body>
 
-    <button id="stop-button" onclick="resetSharing()">&#10094; UKONČIT SDÍLENÍ</button>
-
     <div class="container">
-        <h2>Kotak Share</h2>
+        <h2>Sdílet soubor</h2>
 
-        <div class="upload-area" onclick="document.getElementById('file-input').click()">
-            <span style="font-size: 30px;">📄</span>
-            <p>Vyber soubor k nahrání</p>
+        <div class="upload-box" onclick="document.getElementById('file-input').click()" id="drop-zone">
+            <span style="font-size: 40px;">📂</span>
+            <p id="status-text">Klepni pro výběr souboru</p>
+            <div id="file-details" class="file-info"></div>
         </div>
+
         <input type="file" id="file-input">
 
-        <div id="preview-zone">
-            <img id="preview-img" src="" alt="Náhled">
-            <div id="file-name" class="file-meta" style="color: #fff; font-weight: bold;"></div>
-            <div id="file-size" class="file-meta"></div>
-        </div>
-
-        <button id="btn-submit" class="btn-send" disabled>SDÍLET PŘES NFC</button>
+        <button id="btn-share" class="btn-capsule" disabled>SDÍLET PŘES NFC</button>
     </div>
+
+    <button id="stop-button" onclick="stopSharing()">UKONČIT SDÍLENÍ</button>
 
     <script>
         const fileInput = document.getElementById('file-input');
-        const previewZone = document.getElementById('preview-zone');
-        const previewImg = document.getElementById('preview-img');
-        const fileName = document.getElementById('file-name');
-        const fileSize = document.getElementById('file-size');
-        const btnSubmit = document.getElementById('btn-submit');
+        const btnShare = document.getElementById('btn-share');
+        const statusText = document.getElementById('status-text');
+        const fileDetails = document.getElementById('file-details');
         const stopButton = document.getElementById('stop-button');
 
+        let selectedFile = null;
+
+        // Výběr souboru
         fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                previewZone.style.display = "block";
-                fileName.innerText = file.name;
-                fileSize.innerText = (file.size / 1024).toFixed(1) + " KB";
-                
-                // Pokud je to obrázek, ukážeme náhled
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        previewImg.src = event.target.result;
-                        previewImg.style.display = "block";
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    previewImg.style.display = "none";
-                }
-                
-                btnSubmit.disabled = false;
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                statusText.innerText = "Soubor připraven";
+                fileDetails.innerText = `${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)`;
+                btnShare.disabled = false;
             }
         };
 
-        btnSubmit.onclick = () => {
-            // Tady by se soubor nahrál na tvůj server/Firebase
-            alert("Sdílení aktivováno! Kdokoliv teď pípne tvůj telefon, uvidí tento soubor.");
-            
-            // Aktivace režimu sdílení
-            btnSubmit.innerText = "SOUBOR SE SDÍLÍ...";
-            btnSubmit.disabled = true;
-            stopButton.classList.add('visible');
+        // Funkce Sdílet (Zápis na NFC)
+        btnShare.onclick = async () => {
+            if (!('NDEFReader' in window)) {
+                alert("NFC není podporováno. Přenos bude simulován.");
+                startSharingMode();
+                return;
+            }
+
+            try {
+                const ndef = new NDEFReader();
+                // Vygenerujeme dočasné ID pro tento soubor
+                const shareId = "kotak_" + Math.random().toString(36).substr(2, 9);
+                
+                // Zde bys soubor nahrál na Firebase/KotakEngine cloud
+                // URL, kterou si druhý člověk přečte z tagu
+                const url = `${window.location.origin}/receive.html?id=${shareId}`;
+
+                await ndef.write({
+                    records: [{ recordType: "url", data: url }]
+                });
+
+                alert("Zapsáno! Teď může kdokoliv přiložit telefon k tvé nálepce.");
+                startSharingMode();
+            } catch (error) {
+                alert("Chyba při zápisu: " + error);
+            }
         };
 
-        function resetSharing() {
-            if (confirm("Chceš zastavit sdílení a vymazat soubor?")) {
-                location.reload(); // Vrátí vše do původního stavu
+        function startSharingMode() {
+            btnShare.innerText = "AKTIVNÍ SDÍLENÍ...";
+            btnShare.disabled = true;
+            stopButton.classList.add('visible');
+            // Zde by běžela tvoje WebRTC nebo Firebase logika pro odesílání
+        }
+
+        function stopSharing() {
+            // Resetování stránky nebo návrat do menu
+            if (confirm("Opravdu chceš ukončit sdílení souboru?")) {
+                location.reload();
             }
         }
     </script>
