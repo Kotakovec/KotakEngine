@@ -3,9 +3,9 @@
   "short_name": "KotakEngine",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#121212",
-  "scope": "/",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "scope": "/kotakengine/",
   "handle_links": "preferred",
   "launch_handler": {
     "client_mode": "navigate-existing"
@@ -22,6 +22,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+kotak",
+      "url": "index.html?share=%s"
     }
   ]
 }
