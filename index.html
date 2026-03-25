@@ -12,40 +12,30 @@
     <link rel="apple-touch-icon" href="logo.png">
 
     <style>
-        :root {
-            --primary: #4caf50; /* Změnil jsem na tvou zelenou, ať to ladí */
-            --bg: #121212;
-            --card-bg: #1e1e1e;
+        :root { --primary: #4caf50; --bg: #121212; --card-bg: #1e1e1e; }
+        body, html { margin: 0; padding: 0; height: 100%; background-color: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
+        
+        #install-screen { 
+            display: none; flex-direction: column; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center; 
+            padding: 30px; box-sizing: border-box; 
         }
 
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            background-color: var(--bg); color: white;
-            font-family: sans-serif; overflow: hidden;
+        .logo-img { 
+            width: 120px; height: 120px; border-radius: 25px; 
+            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+            background-image: url('logo.png'); background-size: cover; background-position: center; 
         }
 
-        #install-screen {
-            display: none; flex-direction: column;
-            align-items: center; justify-content: center;
-            height: 100vh; text-align: center; padding: 30px; box-sizing: border-box;
+        #btn-install { 
+            display: none; background: var(--primary); color: #000; 
+            border: none; padding: 18px 40px; border-radius: 30px; 
+            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; 
         }
 
-        .logo-img {
-            width: 120px; height: 120px; border-radius: 25px;
-            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            background-image: url('logo.png'); background-size: cover; background-position: center;
-        }
-
-        #btn-install {
-            display: none; background: var(--primary); color: #000;
-            border: none; padding: 18px 40px; border-radius: 30px;
-            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer;
-        }
-
-        .instruction-box {
-            background: var(--card-bg); padding: 20px;
-            border-radius: 15px; border: 1px solid #333;
-            max-width: 300px; font-size: 14px; color: #aaa;
+        .instruction-box { 
+            background: var(--card-bg); padding: 20px; border-radius: 15px; 
+            border: 1px solid #333; max-width: 300px; font-size: 14px; color: #aaa; 
         }
 
         #main-app-container { display: none; width: 100%; height: 100%; }
@@ -58,9 +48,7 @@
         <div class="logo-img"></div>
         <h1>KotakEngine</h1>
         <p>Pro vstup do aplikace si ji přidej na plochu.</p>
-        
         <button id="btn-install">INSTALOVAT TEĎ</button>
-
         <div class="instruction-box">
             <b>iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
             <b>Android:</b> Klepni na tlačítko výše nebo na tři tečky v prohlížeči.
@@ -79,19 +67,26 @@
         const btnInstall = document.getElementById('btn-install');
 
         function checkStatus() {
+            // Zjistíme, jestli běžíme jako PWA
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             
             if (isStandalone) {
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "block";
-                // OPRAVA: Používáme relativní cestu bez lomítka na začátku
-                mainFrame.src = "main.html"; 
+                
+                // Trik: Přidáme unikátní kód (timestamp) za URL. 
+                // Prohlížeč si pak myslí, že je to nový soubor a nenačte ho z cache.
+                const versionBuster = new Date().getTime();
+                mainFrame.src = "main.html?cache_bust=" + versionBuster; 
+                
+                console.log("PWA aktualizována: " + versionBuster);
             } else {
                 installScreen.style.display = "flex";
                 mainAppContainer.style.display = "none";
             }
         }
 
+        // Instalace pro Android
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -106,6 +101,7 @@
             }
         });
 
+        // Spustit kontrolu
         window.addEventListener('load', checkStatus);
     </script>
 </body>
