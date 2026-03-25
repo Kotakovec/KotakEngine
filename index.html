@@ -13,48 +13,14 @@
 
     <style>
         :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
-        body, html { 
-            margin: 0; padding: 0; height: 100%; 
-            background-color: var(--bg); color: white; 
-            font-family: sans-serif; overflow: hidden; 
-        }
-
-        /* 1. INSTALAČNÍ OBRAZOVKA */
-        #install-screen { 
-            display: none; flex-direction: column; align-items: center; 
-            justify-content: center; height: 100vh; text-align: center; 
-            padding: 30px; box-sizing: border-box; 
-        }
-        .logo-img { 
-            width: 120px; height: 120px; border-radius: 25px; 
-            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
-            background-image: url('logo.png'); background-size: cover; background-position: center; 
-        }
-        #btn-install { 
-            display: none; background: var(--primary); color: #000; 
-            border: none; padding: 18px 40px; border-radius: 30px; 
-            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; 
-        }
-        .instruction-box { 
-            background: var(--card-bg); padding: 20px; border-radius: 20px; 
-            border: 1px solid #222; max-width: 320px; font-size: 13px; color: #888; 
-        }
-
-        /* 2. ÚDRŽBOVÁ OBRAZOVKA */
-        #maintenance-overlay {
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            height: 100vh; background: #000; color: white; text-align: center;
-        }
-        .m-container { 
-            width: 85%; max-width: 400px; padding: 40px 30px; 
-            border: 1px solid #222; border-radius: 40px; background: #111; 
-        }
-        .m-icon { font-size: 50px; margin-bottom: 20px; }
-        .m-title { color: var(--primary); margin: 0 0 10px 0; font-size: 1.5rem; }
+        body, html { margin: 0; padding: 0; height: 100%; background-color: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
+        #install-screen { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; padding: 30px; box-sizing: border-box; }
+        .logo-img { width: 120px; height: 120px; border-radius: 25px; margin-bottom: 25px; background-image: url('logo.png'); background-size: cover; background-position: center; }
+        #btn-install { display: none; background: var(--primary); color: #000; border: none; padding: 18px 40px; border-radius: 30px; font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; }
+        #maintenance-overlay { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #000; color: white; text-align: center; }
+        .m-container { width: 85%; max-width: 400px; padding: 40px 30px; border: 1px solid #222; border-radius: 40px; background: #111; }
         .loader-bar { width: 100%; height: 10px; background: #1a1a1a; margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #333; }
-        #progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s linear; box-shadow: 0 0 20px rgba(76, 175, 80, 0.5); }
-
-        /* 3. HLAVNÍ APP KONTEJNER */
+        #progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s linear; }
         #main-app-container { display: none; width: 100%; height: 100%; }
         iframe { width: 100%; height: 100%; border: none; }
     </style>
@@ -63,21 +29,15 @@
 
     <div id="install-screen">
         <div class="logo-img"></div>
-        <h1 style="margin-bottom: 5px;">KotakEngine</h1>
-        <p style="color: #666; margin-top: 0;">Aplikace vyžaduje spuštění z plochy.</p>
+        <h1>KotakEngine</h1>
         <button id="btn-install">INSTALOVAT TEĎ</button>
-        <div class="instruction-box">
-            <b style="color: #fff;">iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
-            <b style="color: #fff;">Android:</b> Klepni na tři tečky a zvol "Instalovat aplikaci".
-        </div>
     </div>
 
     <div id="maintenance-overlay">
         <div class="m-container">
-            <div class="m-icon">🛠️</div>
-            <h1 class="m-title">Údržba systému</h1>
-            <p style="color: #888; font-size: 14px;">Právě probíhá aktualizace softwaru.</p>
-            <div id="maintenance-timer" style="color: #555; font-size: 12px; margin-top: 10px;">Synchronizace s databází...</div>
+            <div style="font-size: 50px;">🛠️</div>
+            <h1>Údržba systému</h1>
+            <div id="maintenance-timer" style="color: #555; font-size: 12px; margin-bottom: 10px;">...</div>
             <div class="loader-bar"><div id="progress-fill"></div></div>
         </div>
     </div>
@@ -95,107 +55,78 @@
             authDomain: "kotakengine.firebaseapp.com",
             databaseURL: "https://kotakengine-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "kotakengine",
-            storageBucket: "kotakengine.firebasestorage.app",
-            messagingSenderId: "165516964834",
-            appId: "1:165516964834:web:2d3089665eefa76d9bffbb",
-            measurementId: "G-ZSM0GF21LL"
+            appId: "1:165516964834:web:2d3089665eefa76d9bffbb"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        let maintenanceStart = 0;
-        let maintenanceEnd = 0;
-        let currentAppMode = ""; // Sleduje, co zrovna běží ("main" nebo "accept")
+        let mStart = 0, mEnd = 0, currentAppMode = "";
 
-        const installScreen = document.getElementById('install-screen');
-        const maintenanceOverlay = document.getElementById('maintenance-overlay');
-        const mainAppContainer = document.getElementById('main-app-container');
-        const mainFrame = document.getElementById('main-frame');
-        const fill = document.getElementById('progress-fill');
-        const timerText = document.getElementById('maintenance-timer');
+        const layers = {
+            inst: document.getElementById('install-screen'),
+            maint: document.getElementById('maintenance-overlay'),
+            app: document.getElementById('main-app-container'),
+            frame: document.getElementById('main-frame'),
+            fill: document.getElementById('progress-fill'),
+            timer: document.getElementById('maintenance-timer')
+        };
 
-        function updateUIVisibility() {
+        function updateUI() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            const now = new Date().getTime();
+            const now = Date.now();
 
             if (!isStandalone) {
-                installScreen.style.display = "flex";
-                maintenanceOverlay.style.display = "none";
-                mainAppContainer.style.display = "none";
+                layers.inst.style.display = "flex";
+                layers.maint.style.display = "none";
+                layers.app.style.display = "none";
                 return;
             }
 
-            // REŽIM ÚDRŽBY
-            if (maintenanceStart > 0 && now >= maintenanceStart && now < maintenanceEnd) {
-                installScreen.style.display = "none";
-                mainAppContainer.style.display = "none";
-                maintenanceOverlay.style.display = "flex";
-
-                if (mainFrame.src !== "") mainFrame.src = ""; 
+            if (mStart > 0 && now >= mStart && now < mEnd) {
+                layers.inst.style.display = "none";
+                layers.app.style.display = "none";
+                layers.maint.style.display = "flex";
+                layers.frame.src = "";
                 currentAppMode = "";
+                
+                const perc = ((now - mStart) / (mEnd - mStart)) * 100;
+                layers.fill.style.width = Math.min(perc, 100) + "%";
+                layers.timer.innerText = `Konec za ${Math.round((mEnd - now) / 1000)}s`;
+            } else {
+                layers.inst.style.display = "none";
+                layers.maint.style.display = "none";
+                layers.app.style.display = "block";
 
-                const total = maintenanceEnd - maintenanceStart;
-                const elapsed = now - maintenanceStart;
-                let percent = (elapsed / total) * 100;
-                fill.style.width = Math.min(percent, 100) + "%";
+                // --- ROZHODOVÁNÍ O STRÁNCE ---
+                const params = new URLSearchParams(window.location.search);
+                const id = params.get('id');
 
-                const remainSec = Math.round((maintenanceEnd - now) / 1000);
-                timerText.innerText = remainSec > 0 ? `Aktualizace skončí za cca ${remainSec}s` : "Dokončování...";
-            } 
-            // REŽIM BĚŽNÉHO PROVOZU
-            else {
-                installScreen.style.display = "none";
-                maintenanceOverlay.style.display = "none";
-                mainAppContainer.style.display = "block";
-
-                // Kontrola parametrů v URL (např. ?id=sid_...)
-                const urlParams = new URLSearchParams(window.location.search);
-                const shareId = urlParams.get('id');
-
-                if (shareId) {
-                    // Pokud máme ID, jdeme na accept.html
+                if (id) {
                     if (currentAppMode !== "accept") {
                         currentAppMode = "accept";
-                        mainFrame.src = "accept.html?id=" + shareId;
+                        layers.frame.src = "accept.html?id=" + id; // TADY TO POSÍLÁME NA ACCEPT
                     }
                 } else {
-                    // Jinak jdeme na klasické menu
                     if (currentAppMode !== "main") {
                         currentAppMode = "main";
-                        mainFrame.src = "main.html?v=" + now;
+                        layers.frame.src = "main.html?v=" + now;
                     }
                 }
             }
         }
 
-        const maintenanceRef = ref(db, 'settings/maintenance');
-        onValue(maintenanceRef, (snapshot) => {
-            const data = snapshot.val();
+        onValue(ref(db, 'settings/maintenance'), (snap) => {
+            const data = snap.val();
             if (data) {
-                maintenanceStart = new Date(data.startTime).getTime();
-                maintenanceEnd = new Date(data.endTime).getTime();
-                updateUIVisibility();
+                mStart = new Date(data.startTime).getTime();
+                mEnd = new Date(data.endTime).getTime();
+                updateUI();
             }
         });
 
-        setInterval(updateUIVisibility, 1000);
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('btn-install').style.display = 'block';
-        });
-
-        document.getElementById('btn-install').addEventListener('click', () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt = null;
-            }
-        });
-
-        window.addEventListener('load', updateUIVisibility);
+        setInterval(updateUI, 1000);
+        window.addEventListener('load', updateUI);
     </script>
 </body>
 </html>
