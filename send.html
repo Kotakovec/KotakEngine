@@ -9,21 +9,50 @@
     <style>
         :root { --primary: #4caf50; --error: #ff4757; --bg: #000; --card-bg: #111; }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        .container { width: 90%; max-width: 400px; padding: 40px 0; display: flex; flex-direction: column; gap: 20px; }
-        .upload-area { background: var(--card-bg); border: 2px dashed #333; border-radius: 30px; padding: 40px 20px; text-align: center; cursor: pointer; }
-        #preview-zone { display: none; background: #1a1a1a; border-radius: 25px; padding: 20px; border: 1px solid #444; text-align: center; }
+        
+        /* Tlačítko zpět (vlevo) */
+        .back-nav {
+            position: fixed; top: 20px; left: 20px; z-index: 1001;
+            background: var(--primary); width: 45px; height: 45px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+            cursor: pointer; border: none; color: white;
+        }
+
+        /* Plovoucí tlačítko ZRUŠIT (vpravo) */
+        #stop-button { 
+            position: fixed; top: 20px; right: -250px; 
+            background: var(--error); color: #fff; border: none; 
+            padding: 12px 20px; border-radius: 30px; font-weight: bold; 
+            transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            z-index: 1000; box-shadow: 0 0 15px rgba(255, 71, 87, 0.3);
+        }
+        #stop-button.visible { right: 20px; }
+
+        .container { width: 90%; max-width: 400px; padding: 60px 0 20px 0; display: flex; flex-direction: column; gap: 20px; }
+        .upload-area { background: var(--card-bg); border: 1px dashed #333; border-radius: 30px; padding: 40px 20px; text-align: center; cursor: pointer; }
+        
+        #preview-zone { 
+            display: none; background: #1a1a1a; border-radius: 25px; 
+            padding: 20px; border: 1px solid #444; text-align: center; 
+        }
         #preview-img { max-width: 100%; max-height: 150px; border-radius: 10px; margin-bottom: 10px; display: none; }
-        .btn-share { background: var(--primary); color: #000; border: none; padding: 18px; border-radius: 40px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1rem; }
+
+        .btn-share { 
+            background: var(--primary); color: #000; border: none; 
+            padding: 18px; border-radius: 40px; font-weight: bold; 
+            width: 100%; cursor: pointer; font-size: 1.1rem; margin-top: 10px;
+        }
         .btn-share:disabled { background: #222; color: #555; }
-        #stop-button { position: fixed; top: 20px; left: -250px; background: var(--error); color: #fff; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; transition: 0.4s; z-index: 1000; }
-        #stop-button.visible { left: 20px; }
+        
         #status { text-align: center; font-size: 14px; margin-top: 10px; min-height: 20px; }
         input[type="file"] { display: none; }
     </style>
 </head>
 <body>
 
-    <button id="stop-button" onclick="stopSharing()">&#10094; ZRUŠIT SDÍLENÍ</button>
+    <button class="back-nav" onclick="history.back()">&#10094;</button>
+
+    <button id="stop-button" onclick="stopSharing()">ZRUŠIT SDÍLENÍ</button>
 
     <div class="container">
         <h2 style="color: var(--primary); text-align: center;">Kotak Send</h2>
@@ -67,12 +96,6 @@
         fileInput.onchange = (e) => {
             selectedFile = e.target.files[0];
             if (selectedFile) {
-                // Limit pro databázi je cca 8MB, raději dáme 5MB pro stabilitu
-                if (selectedFile.size > 5 * 1024 * 1024) {
-                    alert("Soubor je moc velký pro přímý přenos (max 5MB).");
-                    return;
-                }
-
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     fileBase64 = ev.target.result;
@@ -87,7 +110,8 @@
                         document.getElementById('preview-img').style.display = "none";
                     }
                     btnSubmit.disabled = false;
-                    status.innerText = "Soubor připraven.";
+                    status.innerText = "Soubor připraven k nahrání.";
+                    status.style.color = "#fff";
                 };
                 reader.readAsDataURL(selectedFile);
             }
@@ -95,14 +119,12 @@
 
         btnSubmit.onclick = async () => {
             btnSubmit.disabled = true;
-            status.innerText = "Ukládám do databáze...";
-            status.style.color = "#4caf50";
+            status.innerText = "Zapisuji do databáze...";
 
             try {
-                // Zapíšeme všechno přímo do Realtime Databáze
                 await db.ref('shares/' + senderId).set({
                     name: selectedFile.name,
-                    data: fileBase64, // Soubor jako text
+                    data: fileBase64,
                     size: selectedFile.size,
                     type: selectedFile.type,
                     expires: Date.now() + 3600000,
@@ -110,17 +132,18 @@
                 });
 
                 status.innerText = "SDÍLENÍ AKTIVNÍ";
+                status.style.color = "#4caf50";
                 document.getElementById('stop-button').classList.add('visible');
             } catch (err) {
                 console.error(err);
-                status.innerText = "Chyba databáze! Zkus menší soubor.";
+                status.innerText = "Chyba při sdílení.";
                 status.style.color = "#ff4757";
                 btnSubmit.disabled = false;
             }
         };
 
         function stopSharing() {
-            if(confirm("Ukončit sdílení?")) {
+            if(confirm("Chceš ukončit sdílení souboru?")) {
                 db.ref('shares/' + senderId).remove();
                 location.reload();
             }
