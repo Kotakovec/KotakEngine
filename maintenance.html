@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KotakEngine</title>
+    <title>Údržba | KotakEngine</title>
     <style>
         :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
         body { 
@@ -11,32 +11,68 @@
             font-family: sans-serif; display: flex; align-items: center; 
             justify-content: center; height: 100vh; text-align: center;
         }
-        .container { width: 90%; max-width: 400px; padding: 30px; border: 1px solid #222; border-radius: 40px; background: var(--card-bg); }
+        .container { width: 90%; max-width: 400px; padding: 40px 30px; border: 1px solid #222; border-radius: 40px; background: var(--card-bg); }
         .icon { font-size: 50px; margin-bottom: 20px; }
-        h1 { color: var(--primary); margin: 0 0 10px 0; }
-        p { color: #888; line-height: 1.6; margin-bottom: 0; }
+        h1 { color: var(--primary); margin: 0 0 10px 0; font-size: 1.5rem; }
+        p { color: #888; line-height: 1.6; margin-bottom: 5px; font-size: 14px; }
+        
+        /* Progress Bar */
         .loader-bar { 
-            width: 100%; height: 4px; background: #222; 
-            margin-top: 25px; border-radius: 2px; overflow: hidden; 
+            width: 100%; height: 10px; background: #1a1a1a; 
+            margin-top: 30px; border-radius: 20px; overflow: hidden; 
+            border: 1px solid #333;
         }
-        .loader-progress { 
-            width: 40%; height: 100%; background: var(--primary); 
-            animation: loading 2s infinite ease-in-out; 
-        }
-        @keyframes loading {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(250%); }
+        #progress-fill { 
+            width: 0%; height: 100%; background: var(--primary); 
+            transition: width 0.5s linear;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="icon">🛠️</div>
-        <h1>Probíhají údržby</h1>
-        <p>Právě se pracuje na KotakEngine. údržba může trvat několik minut</p>
+        <h1>Údržba systému</h1>
+        <p>Právě probíhá aktualizace KotakEngine.</p>
+        <p>Za malý okamžik budeme zpět.</p>
+        
         <div class="loader-bar">
-            <div class="loader-progress"></div>
+            <div id="progress-fill"></div>
         </div>
     </div>
+
+    <script>
+        // --- NASTAVENÍ ČASU ---
+        // Čas začátku a konce údržby (RRRR-MM-DDTHH:MM:SS)
+        const startTime = new Date('2026-03-25T16:40:00').getTime(); 
+        const endTime = new Date('2026-03-25T17:15:00').getTime(); 
+        // -----------------------
+
+        const progressFill = document.getElementById('progress-fill');
+
+        function updateProgress() {
+            const now = new Date().getTime();
+            const total = endTime - startTime;
+            const elapsed = now - startTime;
+            
+            let percent = (elapsed / total) * 100;
+            
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            progressFill.style.width = percent + "%";
+
+            // Pokud bar dojede na 100%, zkusíme za 3 sekundy obnovit stránku
+            if (percent >= 100) {
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 3000);
+            }
+        }
+
+        // Spustit ihned a pak každou sekundu
+        updateProgress();
+        setInterval(updateProgress, 1000);
+    </script>
 </body>
 </html>
