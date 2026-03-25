@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KotakEngine - Accept</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        :root { --primary: #4caf50; --bg: #000; --card-bg: #121212; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .card { background: var(--card-bg); border: 1px solid #333; border-radius: 30px; padding: 30px; width: 90%; max-width: 350px; text-align: center; }
+        .btn { background: var(--primary); color: #000; text-decoration: none; padding: 18px; border-radius: 40px; display: block; font-weight: bold; margin-top: 20px; }
+        #status { color: #888; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div id="loader">Čekám na soubor z KotakEngine...</div>
+        <div id="content" style="display:none">
+            <h2 style="color:var(--primary)">Soubor přijat!</h2>
+            <div id="name" style="font-weight:bold; margin-bottom: 5px;"></div>
+            <div id="size" style="color:#888; font-size:12px"></div>
+            <a id="link" href="" download class="btn">STÁHNOUT</a>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBlgu2gdLYiAtqMlN2ABprU6rrXS-w5JfI",
+            databaseURL: "https://kotakengine-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "kotakengine"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+
+        if (id) {
+            db.ref('shares/' + id).on('value', (snap) => {
+                const data = snap.val();
+                if (data && data.isActive && Date.now() < data.expiresAt) {
+                    document.getElementById('loader').style.display="none";
+                    document.getElementById('content').style.display="block";
+                    document.getElementById('name').innerText = data.fileName;
+                    document.getElementById('size').innerText = (data.fileSize/1024).toFixed(1) + " KB";
+                    document.getElementById('link').href = data.fileUrl;
+                } else {
+                    document.getElementById('content').style.display="none";
+                    document.getElementById('loader').innerText = "Žádný aktivní soubor k dispozici.";
+                }
+            });
+        } else {
+            document.getElementById('loader').innerText = "Chybné URL (nenalezeno ID).";
+        }
+    </script>
+</body>
+</html>
