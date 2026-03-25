@@ -4,17 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KotakEngine</title>
+    
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="logo.png">
+
     <style>
         :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
-        body, html { margin: 0; padding: 0; height: 100%; background-color: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
-        #install-screen { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; padding: 30px; box-sizing: border-box; }
-        .logo-img { width: 120px; height: 120px; border-radius: 25px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); background-image: url('logo.png'); background-size: cover; background-position: center; }
-        #btn-install { display: none; background: var(--primary); color: #000; border: none; padding: 18px 40px; border-radius: 30px; font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; }
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            background-color: var(--bg); color: white; 
+            font-family: sans-serif; overflow: hidden; 
+        }
+        
+        #install-screen { 
+            display: none; flex-direction: column; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center; 
+            padding: 30px; box-sizing: border-box; 
+        }
+
+        .logo-img { 
+            width: 120px; height: 120px; border-radius: 25px; 
+            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+            background-image: url('logo.png'); background-size: cover; background-position: center; 
+        }
+
+        #btn-install { 
+            display: none; background: var(--primary); color: #000; 
+            border: none; padding: 18px 40px; border-radius: 30px; 
+            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; 
+        }
+
+        .instruction-box { 
+            background: var(--card-bg); padding: 20px; border-radius: 20px; 
+            border: 1px solid #222; max-width: 320px; font-size: 13px; color: #888; 
+        }
+
         #main-app-container { display: none; width: 100%; height: 100%; }
         iframe { width: 100%; height: 100%; border: none; }
     </style>
@@ -23,9 +50,15 @@
 
     <div id="install-screen">
         <div class="logo-img"></div>
-        <h1>KotakEngine</h1>
-        <p>Aplikaci je nutné přidat na plochu.</p>
-        <button id="btn-install">INSTALOVAT</button>
+        <h1 style="margin-bottom: 5px;">KotakEngine</h1>
+        <p style="color: #666; margin-top: 0;">Aplikace vyžaduje spuštění z plochy.</p>
+        
+        <button id="btn-install">INSTALOVAT TEĎ</button>
+
+        <div class="instruction-box">
+            <b style="color: #fff;">iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
+            <b style="color: #fff;">Android:</b> Klepni na tři tečky a zvol "Instalovat aplikaci".
+        </div>
     </div>
 
     <div id="main-app-container">
@@ -33,11 +66,6 @@
     </div>
 
     <script>
-        // REGISTRACE SERVICE WORKERU
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
-        }
-
         let deferredPrompt;
         const installScreen = document.getElementById('install-screen');
         const mainAppContainer = document.getElementById('main-app-container');
@@ -46,17 +74,24 @@
 
         function initApp() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            
             if (isStandalone) {
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "block";
-                // Cache buster pro jistotu
-                mainFrame.src = "main.html?v=" + new Date().getTime();
+                
+                // FORCE UPDATE: Každé otevření PWA z plochy vynutí stažení nové verze main.html
+                // Přidání ?v=... zajistí, že prohlížeč ignoruje starou cache
+                const forceRefresh = new Date().getTime();
+                mainFrame.src = "main.html?v=" + forceRefresh;
+                
+                console.log("🚀 KotakEngine PWA načtena s verzí: " + forceRefresh);
             } else {
                 installScreen.style.display = "flex";
                 mainAppContainer.style.display = "none";
             }
         }
 
+        // Instalace (Android)
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -71,6 +106,7 @@
             }
         });
 
+        // Kontrola hned po načtení index.html
         window.addEventListener('load', initApp);
     </script>
 </body>
