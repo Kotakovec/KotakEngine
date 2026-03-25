@@ -19,28 +19,41 @@
             border-radius: 30px; padding: 30px; width: 85%; 
             max-width: 350px; text-align: center; 
             box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+            /* Zarovnání obsahu karty na střed */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .btn { 
             background: var(--primary); color: #000; 
             text-decoration: none; padding: 18px; border-radius: 40px; 
             display: block; font-weight: bold; margin-top: 20px; 
             font-size: 1.1rem; transition: transform 0.1s;
+            width: 100%; /* Aby tlačítko zabíralo celou šířku */
         }
         .btn:active { transform: scale(0.95); }
         
-        /* ZMENŠENÝ NÁHLED O 15% */
+        /* ZVĚTŠENÝ NÁHLED O 35% OPROTI MINULÉMU (tj. 90% původního) */
         #preview-img { 
             max-width: 100%; 
-            max-height: 127px; /* Sníženo ze 150px na 127px */
+            max-height: 135px; /* Sníženo ze 150px na 135px (90% původní velikosti) */
             border-radius: 12px; 
-            margin-top: 12px; 
+            margin-top: 15px; /* Vráceno na 15px pro lepší rozestup */
+            margin-bottom: 5px; /* Přidáno trochu místa pod obrázek */
             display: none; border: 1px solid #333; 
         }
 
         #loader { color: #666; font-size: 14px; }
-        h2 { margin-top: 0; color: var(--primary); font-size: 1.4rem; }
-        #fname { font-weight: bold; word-break: break-all; font-size: 1.1rem; }
-        #fsize { color: #888; font-size: 11px; margin-top: 4px; }
+        h2 { margin-top: 0; color: var(--primary); font-size: 1.4rem; margin-bottom: 10px; }
+        
+        /* ZMENŠENÍ NÁZVU DOKUMENTU */
+        #fname { 
+            font-weight: bold; 
+            word-break: break-all; 
+            font-size: 0.95rem; /* Zmenšeno z 1.1rem na 0.95rem */
+            color: #eee; /* Trochu ztlumená barva */
+            margin-bottom: 2px;
+        }
+        
+        #fsize { color: #888; font-size: 11px; margin-top: 0px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -80,7 +93,9 @@
                 
                 if (val && val.active && Date.now() < val.expires) {
                     document.getElementById('loader').style.display = "none";
-                    document.getElementById('content').style.display = "block";
+                    document.getElementById('content').style.display = "flex"; // Změněno na flex pro zarovnání
+                    document.getElementById('content').style.flexDirection = "column";
+                    document.getElementById('content').style.alignItems = "center";
                     
                     document.getElementById('fname').innerText = val.name;
                     document.getElementById('fsize').innerText = (val.size / 1024).toFixed(1) + " KB";
