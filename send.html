@@ -7,37 +7,39 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
-        :root { --primary: #4caf50; --error: #ff4757; --bg: #000; --card-bg: rgba(22, 22, 22, 0.95); }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        :root { --primary: #4caf50; --error: #ff4757; --bg: #000; --card-bg: #111; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .container { width: 90%; max-width: 400px; padding: 40px 0; display: flex; flex-direction: column; gap: 20px; }
-        .upload-area { background: var(--card-bg); border: 1px solid #333; border-radius: 30px; padding: 30px; text-align: center; cursor: pointer; border-style: dashed; }
-        #preview-zone { display: none; background: #1a1a1a; border-radius: 25px; padding: 20px; border: 1px solid #444; text-align: center; }
-        #preview-img { max-width: 100%; max-height: 200px; border-radius: 15px; margin-bottom: 10px; display: none; }
-        .btn-share { background: var(--primary); color: #000; border: none; padding: 18px; border-radius: 40px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1rem; }
-        .btn-share:disabled { background: #222; color: #555; cursor: not-allowed; }
-        #stop-button { position: fixed; top: 20px; left: -220px; background: var(--error); color: #fff; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; transition: 0.4s; z-index: 1000; box-shadow: 0 0 20px rgba(255, 71, 87, 0.4); }
+        .upload-area { background: var(--card-bg); border: 2px dashed #333; border-radius: 30px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .upload-area:active { transform: scale(0.98); border-color: var(--primary); }
+        #preview-zone { display: none; background: #1a1a1a; border-radius: 25px; padding: 20px; border: 1px solid #444; text-align: center; margin-top: 10px; }
+        #preview-img { max-width: 100%; max-height: 150px; border-radius: 15px; margin-bottom: 10px; display: none; }
+        .btn-share { background: var(--primary); color: #000; border: none; padding: 18px; border-radius: 40px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1rem; margin-top: 10px; }
+        .btn-share:disabled { background: #222; color: #555; }
+        #stop-button { position: fixed; top: 20px; left: -250px; background: var(--error); color: #fff; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; transition: 0.4s; z-index: 1000; }
         #stop-button.visible { left: 20px; }
         input[type="file"] { display: none; }
-        #status { text-align: center; font-size: 14px; min-height: 20px; }
+        #status { text-align: center; font-size: 14px; min-height: 20px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <button id="stop-button" onclick="stopSharing()">&#10094; UKONČIT SDÍLENÍ</button>
+    <button id="stop-button" onclick="stopSharing()">&#10094; ZRUŠIT SDÍLENÍ</button>
 
     <div class="container">
-        <h2 style="color: var(--primary); text-align: center;">Kotak Send</h2>
-        <div id="user-id-tag" style="font-size: 11px; color: #555; text-align: center; margin-top: -15px;"></div>
+        <h2 style="color: var(--primary); text-align: center; margin-bottom: 5px;">Kotak Send</h2>
+        <div id="user-id-tag" style="font-size: 11px; color: #555; text-align: center; margin-bottom: 20px;"></div>
 
         <div class="upload-area" onclick="document.getElementById('file-input').click()">
-            <div style="font-size: 40px; margin-bottom: 10px;">📂</div>
-            <p>Klepni a vyber soubor</p>
+            <div style="font-size: 50px; margin-bottom: 15px;">☁️</div>
+            <p id="label-text" style="margin:0; font-weight:bold;">Vybrat soubor</p>
+            <p style="font-size: 12px; color: #666; margin-top: 5px;">Max. 100 MB • Zdarma</p>
         </div>
         <input type="file" id="file-input">
 
         <div id="preview-zone">
             <img id="preview-img" src="">
-            <div id="file-name" style="font-weight: bold; margin-bottom: 5px;"></div>
+            <div id="file-name" style="font-weight: bold; font-size: 14px; word-break: break-all;"></div>
             <div id="file-size" style="color: #888; font-size: 12px;"></div>
         </div>
 
@@ -56,70 +58,78 @@
 
         let senderId = localStorage.getItem('kotak_sender_id') || ('sid_' + Math.random().toString(36).substr(2, 9));
         localStorage.setItem('kotak_sender_id', senderId);
-        document.getElementById('user-id-tag').innerText = "SENDER ID: " + senderId;
+        document.getElementById('user-id-tag').innerText = "ID ZAŘÍZENÍ: " + senderId;
 
         const fileInput = document.getElementById('file-input');
         const btnSubmit = document.getElementById('btn-submit');
         const status = document.getElementById('status');
         let selectedFile = null;
-        let base64Data = null;
 
         fileInput.onchange = (e) => {
             selectedFile = e.target.files[0];
             if (selectedFile) {
-                if (selectedFile.size > 10 * 1024 * 1024) {
-                    alert("Soubor je moc velký (max 10MB pro DB verzi)");
-                    return;
-                }
-
                 document.getElementById('preview-zone').style.display = "block";
                 document.getElementById('file-name').innerText = selectedFile.name;
                 document.getElementById('file-size').innerText = (selectedFile.size/1024).toFixed(1) + " KB";
-
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    base64Data = ev.target.result;
-                    if (selectedFile.type.startsWith('image/')) {
-                        document.getElementById('preview-img').src = base64Data;
-                        document.getElementById('preview-img').style.display = "block";
-                    } else {
-                        document.getElementById('preview-img').style.display = "none";
-                    }
-                    btnSubmit.disabled = false;
-                    status.innerText = "Soubor připraven k odeslání";
-                    status.style.color = var(--primary);
-                };
-                reader.readAsDataURL(selectedFile);
+                
+                if (selectedFile.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => { 
+                        const img = document.getElementById('preview-img');
+                        img.src = ev.target.result; 
+                        img.style.display="block"; 
+                    };
+                    reader.readAsDataURL(selectedFile);
+                } else {
+                    document.getElementById('preview-img').style.display="none";
+                }
+                btnSubmit.disabled = false;
+                status.innerText = "Soubor připraven.";
             }
         };
 
         btnSubmit.onclick = async () => {
             btnSubmit.disabled = true;
-            status.innerText = "Ukládám do KotakEngine...";
-            
+            status.innerText = "Nahrávám do Kotak Cloudu...";
+            status.style.color = "#4caf50";
+
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+
             try {
-                await db.ref('shares/' + senderId).set({
-                    fileName: selectedFile.name,
-                    fileData: base64Data, // Celý soubor uložíme jako text přímo do DB
-                    fileSize: selectedFile.size,
-                    fileType: selectedFile.type,
-                    expiresAt: Date.now() + 3600000,
-                    isActive: true
+                // Nahrávání přes File.io (mnohem stabilnější pro PWA)
+                const response = await fetch("https://file.io/?expires=1h", {
+                    method: "POST",
+                    body: formData
                 });
 
-                status.innerText = "SDÍLENÍ AKTIVNÍ";
-                status.style.color = "#4caf50";
-                document.getElementById('stop-button').classList.add('visible');
+                const result = await response.json();
+
+                if (result.success) {
+                    // Zápis odkazu do Firebase
+                    await db.ref('shares/' + senderId).set({
+                        fileName: selectedFile.name,
+                        fileUrl: result.link, // Odkaz od file.io
+                        fileSize: selectedFile.size,
+                        expiresAt: Date.now() + 3600000,
+                        isActive: true
+                    });
+
+                    status.innerText = "SDÍLENÍ AKTIVNÍ";
+                    document.getElementById('stop-button').classList.add('visible');
+                } else {
+                    throw new Error("Upload selhal");
+                }
             } catch (err) {
                 console.error(err);
-                status.innerText = "Chyba při zápisu do databáze!";
+                status.innerText = "Chyba při odesílání!";
                 status.style.color = "#ff4757";
                 btnSubmit.disabled = false;
             }
         };
 
         async function stopSharing() {
-            if(confirm("Chceš ukončit sdílení?")) {
+            if(confirm("Ukončit sdílení souboru?")) {
                 await db.ref('shares/' + senderId).remove();
                 location.reload();
             }
