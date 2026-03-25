@@ -57,12 +57,11 @@
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "block";
 
-                // LOGIKA PŘEPÍNÁNÍ: Údržba vs. Aplikace
+                // PŘEPÍNAČ: Pokud je aktuální čas v rozmezí údržby, načte se maintenance.html
                 if (now >= zacatekUdrzby && now < konecUdrzby) {
-                    // JE čas údržby -> ukaž maintenance.html
                     mainFrame.src = "maintenance.html";
                 } else {
-                    // NENÍ čas údržby -> ukaž aplikaci s cache busterem
+                    // Jinak se načte klasicky hlavní aplikace
                     mainFrame.src = "main.html?v=" + now;
                 }
             } else {
