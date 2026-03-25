@@ -42,33 +42,44 @@
             height: 100vh;
             flex-shrink: 0;
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
         }
 
         #main-menu {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 40px 20px;
+            padding: 40px 20px 20px 20px;
             background: rgba(0, 0, 0, 0.4); 
-            overflow-y: auto;
         }
 
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             color: #4caf50;
             text-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+            text-align: center;
         }
 
-        .grid {
+        /* Horní část s velkými tlačítky */
+        .top-section {
+            flex-grow: 1; /* Odtlačí zbytek dolů */
             display: flex;
             flex-direction: column;
             gap: 15px;
             width: 100%;
             max-width: 400px;
+            margin: 0 auto;
         }
 
-        /* Styl velké kapsle (File Encrypter) */
+        /* Spodní část s tlačítky vedle sebe */
+        .bottom-section {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 10px auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Společný styl kapsle */
         .finta-card {
             background: rgba(22, 22, 22, 0.85); 
             backdrop-filter: blur(5px); 
@@ -81,22 +92,7 @@
             border: 1px solid rgba(76, 175, 80, 0.3);
             position: relative;
             min-height: 60px;
-        }
-
-        /* Kontejner pro tlačítka vedle sebe */
-        .row-container {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-        }
-
-        /* Styl malých kapslí v řadě */
-        .small-card {
-            flex: 1; /* Rozdělí šířku 50/50 */
-            padding: 12px 15px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            min-height: 50px;
+            box-sizing: border-box;
         }
 
         .finta-card:active {
@@ -104,9 +100,17 @@
             border-color: #ff4757;
         }
 
+        /* Malé kapsle dole */
+        .small-card {
+            flex: 1;
+            padding: 12px 10px;
+            border-radius: 30px;
+            min-height: 55px;
+        }
+
         .finta-card .emoji {
-            font-size: 20px;
-            margin-right: 10px;
+            font-size: 22px;
+            margin-right: 12px;
         }
 
         .finta-card h3 {
@@ -115,6 +119,11 @@
             width: 100%;
             text-align: center;
             font-weight: 500;
+        }
+
+        /* Úprava textu pro malé kapsle, aby se tam vešel */
+        .small-card h3 {
+            font-size: 0.85rem;
         }
 
         #webview-page { background: #000; position: relative; }
@@ -147,12 +156,12 @@
     <div id="app-wrapper">
         <div class="page" id="main-menu">
             <h1>KotakEngine</h1>
-            <div class="grid" id="tlacitka-grid">
+            
+            <div class="top-section" id="top-grid">
                 </div>
-            <div class="grid" style="margin-top: 15px;">
-                <div class="row-container" id="row-grid">
-                    </div>
-            </div>
+
+            <div class="bottom-section" id="bottom-grid">
+                </div>
         </div>
 
         <div class="page" id="webview-page">
@@ -161,33 +170,38 @@
     </div>
 
     <script>
-        // Rozdělení na hlavní a vedlejší tlačítka
-        const hlavníFinta = [
+        // Data pro horní část (3x stejné dle zadání)
+        const horniFinty = [
             { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" },
-           { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" }
+            { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" },
+            { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" }
         ];
-        const vedlejšíFinty = [
+
+        // Data pro spodní část
+        const spodniFinty = [
             { nazev: "Odeslat", emoji: "📡", soubor: "nfc.html" },
             { nazev: "Nastavení", emoji: "⚙️", soubor: "settings.html" }
         ];
 
-        const grid = document.getElementById('tlacitka-grid');
-        const rowGrid = document.getElementById('row-grid');
+        const topGrid = document.getElementById('top-grid');
+        const bottomGrid = document.getElementById('bottom-grid');
 
-        // Vytvoření hlavního tlačítka
-        const mainCard = document.createElement('div');
-        mainCard.className = 'finta-card';
-        mainCard.onclick = () => otevriAplikaci(hlavníFinta.soubor);
-        mainCard.innerHTML = `<span class="emoji">${hlavníFinta.emoji}</span><h3>${hlavníFinta.nazev}</h3>`;
-        grid.appendChild(mainCard);
+        // Vykreslení horních velkých tlačítek
+        horniFinty.forEach(finta => {
+            const card = document.createElement('div');
+            card.className = 'finta-card';
+            card.onclick = () => otevriAplikaci(finta.soubor);
+            card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
+            topGrid.appendChild(card);
+        });
 
-        // Vytvoření tlačítek vedle sebe
-        vedlejšíFinty.forEach(finta => {
+        // Vykreslení spodních tlačítek vedle sebe
+        spodniFinty.forEach(finta => {
             const card = document.createElement('div');
             card.className = 'finta-card small-card';
             card.onclick = () => otevriAplikaci(finta.soubor);
             card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
-            rowGrid.appendChild(card);
+            bottomGrid.appendChild(card);
         });
 
         const appWrapper = document.getElementById('app-wrapper');
@@ -206,7 +220,7 @@
             setTimeout(() => { appFrame.src = ""; }, 500);
         }
 
-        /* --- ANIMACE POZADÍ --- */
+        /* --- ANIMACE POZADÍ (Zůstává stejná) --- */
         var App = {};
         App.setup = function() {
             var canvas = document.createElement('canvas');
