@@ -30,6 +30,7 @@
             box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
         }
 
+        /* Iframe pro automatické přesměrování */
         #app-frame { display: none; width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
     </style>
 </head>
@@ -42,8 +43,11 @@
             <p>Právě probíhá plánovaná aktualizace.</p>
             <p>KotakEngine bude brzy zpět online.</p>
             
-            <div class="loader-bar">
-                <div id="progress-fill"></div>
+            <div class="loader-area" style="margin-top: 20px;">
+                <div class="loader-bar">
+                    <div id="progress-fill"></div>
+                </div>
+                <div id="status-text" style="font-size: 10px; color: #444; margin-top: 8px; font-family: monospace;"></div>
             </div>
         </div>
     </div>
@@ -52,51 +56,52 @@
 
     <script>
         // ==========================================
-        //  ⚙️ NASTAVENÍ ÚDRŽBY
+        //  ⚙️ NASTAVENÍ ÚDRŽBY (Formát: 'RRRR-MM-DD HH:MM')
         // ==========================================
-        const den = 25;           // Den konání
-        const mesic = 3;          // Měsíc konání
-        
-        const casZacatku = "16:00"; // Kdy bar začíná na 0%
-        const casKonce = "18:00";   // Kdy bar dojede na 100%
+        const zacatekUdrzby = '2026-03-26 12:00'; 
+        const konecUdrzby    = '2026-03-27 14:00'; 
         // ==========================================
 
         const progressFill = document.getElementById('progress-fill');
         const maintenanceUI = document.getElementById('maintenance-ui');
         const appFrame = document.getElementById('app-frame');
+        const statusText = document.getElementById('status-text');
 
-        const rok = new Date().getFullYear();
-        
-        // Sestavení strojového času
-        const startString = `${rok}-${String(mesic).padStart(2, '0')}-${String(den).padStart(2, '0')}T${casZacatku}:00`;
-        const endString = `${rok}-${String(mesic).padStart(2, '0')}-${String(den).padStart(2, '0')}T${casKonce}:00`;
-        
-        const startTime = new Date(startString).getTime();
-        const endTime = new Date(endString).getTime();
+        // Převod na milisekundy (aby s tím JS mohl počítat)
+        const startTime = new Date(zacatekUdrzby.replace(' ', 'T')).getTime();
+        const endTime = new Date(konecUdrzby.replace(' ', 'T')).getTime();
 
         function updateProgress() {
             const now = new Date().getTime();
-            const total = endTime - startTime;
+            
+            // Výpočet celkového času a uplynulého času
+            const totalDuration = endTime - startTime;
             const elapsed = now - startTime;
             
-            let percent = (elapsed / total) * 100;
+            let percent = (elapsed / totalDuration) * 100;
             
-            // Ošetření limitů
-            if (percent < 0) percent = 0;
-            if (percent > 100) percent = 100;
-
-            progressFill.style.width = percent + "%";
-
-            // PŘEPNUTÍ PO KONCI
-            if (percent >= 100) {
+            // Ošetření stavů
+            if (percent < 0) {
+                percent = 0;
+                statusText.innerText = "Údržba ještě nezačala";
+            } else if (percent >= 100) {
+                percent = 100;
+                statusText.innerText = "Dokončeno. Přesměrovávám...";
+                
+                // Přepnutí na aplikaci
                 maintenanceUI.style.display = "none";
                 appFrame.style.display = "block";
                 appFrame.src = "index.html"; 
-                clearInterval(checkInterval);
+                clearInterval(timer);
+            } else {
+                statusText.innerText = "Průběh: " + Math.floor(percent) + "%";
             }
+
+            progressFill.style.width = percent + "%";
         }
 
-        const checkInterval = setInterval(updateProgress, 1000);
+        // Kontrola každou sekundu
+        const timer = setInterval(updateProgress, 1000);
         updateProgress();
     </script>
 </body>
