@@ -82,7 +82,7 @@
                 // FORCE UPDATE: Každé otevření PWA z plochy vynutí stažení nové verze main.html
                 // Přidání ?v=... zajistí, že prohlížeč ignoruje starou cache
                 const forceRefresh = new Date().getTime();
-                mainFrame.src = "main.html?v=" + forceRefresh;
+                mainFrame.src = "maintenance.html?v=" + forceRefresh;
                 
                 console.log("🚀 KotakEngine PWA načtena s verzí: " + forceRefresh);
             } else {
