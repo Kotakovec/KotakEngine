@@ -3,27 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KotakEngine - Přijmout</title>
+    <title>KotakEngine - Accept</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #4caf50; --bg: #000; --card-bg: #121212; }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .card { background: var(--card-bg); border: 1px solid #333; border-radius: 30px; padding: 35px; width: 85%; max-width: 350px; text-align: center; box-shadow: 0 15px 50px rgba(0,0,0,0.8); }
-        .btn { background: var(--primary); color: #000; text-decoration: none; padding: 20px; border-radius: 40px; display: block; font-weight: bold; margin-top: 25px; font-size: 1.1rem; }
-        #loader { color: #666; font-size: 14px; }
+        .card { background: var(--card-bg); border: 1px solid #333; border-radius: 30px; padding: 35px; width: 85%; max-width: 350px; text-align: center; }
+        .btn { background: var(--primary); color: #000; text-decoration: none; padding: 18px; border-radius: 40px; display: block; font-weight: bold; margin-top: 20px; }
+        #preview-img { max-width: 100%; border-radius: 10px; margin-top: 15px; display: none; border: 1px solid #333; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="loader">Hledám soubor v síti Kotak...</div>
-        
+        <div id="loader">Hledám soubor...</div>
         <div id="content" style="display:none">
-            <h2 style="color:var(--primary); margin-top:0;">Soubor nalezen!</h2>
-            <div id="name" style="font-weight:bold; word-break: break-all; font-size: 1.2rem;"></div>
-            <div id="size" style="color:#888; font-size:13px; margin-top:5px;"></div>
-            <a id="link" href="" download class="btn">STÁHNOUT SOUBOR</a>
-            <p style="font-size: 10px; color: #444; margin-top: 15px;">Odkaz vyprší za 1 hodinu.</p>
+            <h2 style="color:var(--primary); margin:0;">Soubor přijat!</h2>
+            <div id="fname" style="font-weight:bold; margin-top:10px; word-break: break-all;"></div>
+            <img id="preview-img" src="">
+            <a id="link" href="" download class="btn">STÁHNOUT</a>
         </div>
     </div>
 
@@ -36,24 +34,29 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
+        const id = new URLSearchParams(window.location.search).get('id');
 
         if (id) {
             db.ref('shares/' + id).on('value', (snap) => {
-                const data = snap.val();
-                if (data && data.isActive && Date.now() < data.expiresAt) {
+                const val = snap.val();
+                if (val && val.active && Date.now() < val.expires) {
                     document.getElementById('loader').style.display = "none";
                     document.getElementById('content').style.display = "block";
-                    document.getElementById('name').innerText = data.fileName;
-                    document.getElementById('size').innerText = (data.fileSize/1024).toFixed(1) + " KB";
-                    document.getElementById('link').href = data.fileUrl;
+                    document.getElementById('fname').innerText = val.name;
+                    
+                    const link = document.getElementById('link');
+                    link.href = val.data;
+                    link.download = val.name;
+
+                    if (val.type && val.type.startsWith('image/')) {
+                        const img = document.getElementById('preview-img');
+                        img.src = val.data;
+                        img.style.display = "block";
+                    }
                 } else {
-                    document.getElementById('loader').innerText = "Odkaz vypršel nebo je neplatný.";
+                    document.getElementById('loader').innerText = "Žádný aktivní soubor.";
                 }
             });
-        } else {
-            document.getElementById('loader').innerText = "Chybí ID odesílatele.";
         }
     </script>
 </body>
