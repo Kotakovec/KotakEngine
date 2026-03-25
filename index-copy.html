@@ -54,12 +54,14 @@
         .loader-bar { width: 100%; height: 10px; background: #1a1a1a; margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #333; }
         #progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s linear; box-shadow: 0 0 20px rgba(76, 175, 80, 0.5); }
 
+        /* TEXTOVÉ INFO SEKCE */
+        .info-update { margin-top: 30px; color: var(--primary); font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        #maintenance-info { margin-top: 10px; color: #ccc; font-size: 14px; line-height: 1.5; padding: 0 10px; }
+        #maintenance-timer { margin-top: 15px; color: #555; font-size: 12px; }
+
         /* 3. HLAVNÍ APP KONTEJNER */
         #main-app-container { display: none; width: 100%; height: 100%; }
         iframe { width: 100%; height: 100%; border: none; }
-
-        .info-update { text-align: center; padding: 40px 30px }
-        .info { text-align: center; padding: 20px 30px }
     </style>
 </head>
 <body>
@@ -80,10 +82,12 @@
             <div class="m-icon">🛠️</div>
             <h1 class="m-title">Údržba systému</h1>
             <p style="color: #888; font-size: 14px;">Právě probíhá aktualizace softwaru.</p>
-            <div class="loader-bar"><div id="progress-fill"></div></div>
-            <div class="info-update">Úpravy:</div>
-            <div class="info">###info###</div>
             
+            <div class="loader-bar"><div id="progress-fill"></div></div>
+            <div id="maintenance-timer">Synchronizace času...</div>
+
+            <div class="info-update">Info:</div>
+            <div id="maintenance-info">Načítání informací o updatu...</div>
         </div>
     </div>
 
@@ -118,8 +122,8 @@
         const mainFrame = document.getElementById('main-frame');
         const fill = document.getElementById('progress-fill');
         const timerText = document.getElementById('maintenance-timer');
+        const infoText = document.getElementById('maintenance-info');
 
-        // FUNKCE PRO ROZHODNUTÍ, CO ZOBRAZIT
         function updateUIVisibility() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const now = new Date().getTime();
@@ -131,7 +135,6 @@
                 return;
             }
 
-            // Pokud máme časy a jsme v rozmezí údržby
             if (maintenanceStart > 0 && now >= maintenanceStart && now < maintenanceEnd) {
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "none";
@@ -145,7 +148,7 @@
                 fill.style.width = Math.min(percent, 100) + "%";
                 
                 const remainSec = Math.round((maintenanceEnd - now) / 1000);
-                timerText.innerText = `Aktualizace skončí za cca ${remainSec}s`;
+                timerText.innerText = remainSec > 0 ? `Aktualizace skončí za cca ${remainSec}s` : "Dokončování...";
             } else {
                 installScreen.style.display = "none";
                 maintenanceOverlay.style.display = "none";
@@ -157,22 +160,27 @@
             }
         }
 
-        // POSLUCHAČ DATABÁZE (Reaguje okamžitě na každou změnu v RTDB)
         const maintenanceRef = ref(db, 'settings/maintenance');
         onValue(maintenanceRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 maintenanceStart = new Date(data.startTime).getTime();
                 maintenanceEnd = new Date(data.endTime).getTime();
+                
+                // TADY SE NAČÍTÁ INFO TEXT Z FIREBASE
+                if (data.updateInfo) {
+                    infoText.innerText = data.updateInfo;
+                } else {
+                    infoText.innerText = "Žádné podrobnosti nejsou k dispozici.";
+                }
+
                 console.log("Data z DB aktualizována!");
-                updateUIVisibility(); // Přepočítat stav ihned po změně v DB
+                updateUIVisibility();
             }
         });
 
-        // SEKUNDOVÝ HLÍDAČ (Pro plynulý progress bar a časovač)
         setInterval(updateUIVisibility, 1000);
 
-        // PWA instalace
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
