@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KotakEngine</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <style>
+        :root { --primary: #4caf50; --bg: #000; --card-bg: #111; }
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            background-color: var(--bg); color: white; 
+            font-family: sans-serif; overflow: hidden; 
+        }
+
+        /* 1. INSTALAČNÍ OBRAZOVKA */
+        #install-screen { 
+            display: none; flex-direction: column; align-items: center; 
+            justify-content: center; height: 100vh; text-align: center; 
+            padding: 30px; box-sizing: border-box; 
+        }
+        .logo-img { 
+            width: 120px; height: 120px; border-radius: 25px; 
+            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+            background-image: url('logo.png'); background-size: cover; background-position: center; 
+        }
+        #btn-install { 
+            display: none; background: var(--primary); color: #000; 
+            border: none; padding: 18px 40px; border-radius: 30px; 
+            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; 
+        }
+        .instruction-box { 
+            background: var(--card-bg); padding: 20px; border-radius: 20px; 
+            border: 1px solid #222; max-width: 320px; font-size: 13px; color: #888; 
+        }
+
+        /* 2. ÚDRŽBOVÁ OBRAZOVKA */
+        #maintenance-overlay {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; background: #000; color: white; text-align: center;
+        }
+        .m-container { 
+            width: 85%; max-width: 400px; padding: 40px 30px; 
+            border: 1px solid #222; border-radius: 40px; background: #111; 
+        }
+        .m-icon { font-size: 50px; margin-bottom: 20px; }
+        .m-title { color: var(--primary); margin: 0 0 10px 0; font-size: 1.5rem; }
+        .loader-bar { width: 100%; height: 10px; background: #1a1a1a; margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #333; }
+        #progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s linear; box-shadow: 0 0 20px rgba(76, 175, 80, 0.5); }
+
+        /* 3. HLAVNÍ APP KONTEJNER */
+        #main-app-container { display: none; width: 100%; height: 100%; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+
+    <div id="install-screen">
+        <div class="logo-img"></div>
+        <h1 style="margin-bottom: 5px;">KotakEngine</h1>
+        <p style="color: #666; margin-top: 0;">Aplikace vyžaduje spuštění z plochy.</p>
+        <button id="btn-install">INSTALOVAT TEĎ</button>
+        <div class="instruction-box">
+            <b style="color: #fff;">iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
+            <b style="color: #fff;">Android:</b> Klepni na tři tečky a zvol "Instalovat aplikaci".
+        </div>
+    </div>
+
+    <div id="maintenance-overlay">
+        <div class="m-container">
+            <div class="m-icon">🛠️</div>
+            <h1 class="m-title">Údržba systému</h1>
+            <p style="color: #888; font-size: 14px;">Právě probíhá aktualizace softwaru.</p>
+            <div id="maintenance-timer" style="color: #555; font-size: 12px; margin-top: 10px;">Synchronizace s databází...</div>
+            <div class="loader-bar"><div id="progress-fill"></div></div>
+        </div>
+    </div>
+
+    <div id="main-app-container">
+        <iframe id="main-frame" src=""></iframe>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBlgu2gdLYiAtqMlN2ABprU6rrXS-w5JfI",
+            authDomain: "kotakengine.firebaseapp.com",
+            databaseURL: "https://kotakengine-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "kotakengine",
+            storageBucket: "kotakengine.firebasestorage.app",
+            messagingSenderId: "165516964834",
+            appId: "1:165516964834:web:2d3089665eefa76d9bffbb",
+            measurementId: "G-ZSM0GF21LL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let maintenanceStart = 0;
+        let maintenanceEnd = 0;
+
+        const installScreen = document.getElementById('install-screen');
+        const maintenanceOverlay = document.getElementById('maintenance-overlay');
+        const mainAppContainer = document.getElementById('main-app-container');
+        const mainFrame = document.getElementById('main-frame');
+        const fill = document.getElementById('progress-fill');
+        const timerText = document.getElementById('maintenance-timer');
+
+        // FUNKCE PRO ROZHODNUTÍ, CO ZOBRAZIT
+        function updateUIVisibility() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const now = new Date().getTime();
+
+            if (!isStandalone) {
+                installScreen.style.display = "flex";
+                maintenanceOverlay.style.display = "none";
+                mainAppContainer.style.display = "none";
+                return;
+            }
+
+            // Pokud máme časy a jsme v rozmezí údržby
+            if (maintenanceStart > 0 && now >= maintenanceStart && now < maintenanceEnd) {
+                installScreen.style.display = "none";
+                mainAppContainer.style.display = "none";
+                maintenanceOverlay.style.display = "flex";
+
+                if (mainFrame.src !== "") mainFrame.src = ""; 
+
+                const total = maintenanceEnd - maintenanceStart;
+                const elapsed = now - maintenanceStart;
+                let percent = (elapsed / total) * 100;
+                fill.style.width = Math.min(percent, 100) + "%";
+                
+                const remainSec = Math.round((maintenanceEnd - now) / 1000);
+                timerText.innerText = `Aktualizace skončí za cca ${remainSec}s`;
+            } else {
+                installScreen.style.display = "none";
+                maintenanceOverlay.style.display = "none";
+                mainAppContainer.style.display = "block";
+
+                if (!mainFrame.src.includes("main.html")) {
+                    mainFrame.src = "main.html?v=" + now;
+                }
+            }
+        }
+
+        // POSLUCHAČ DATABÁZE (Reaguje okamžitě na každou změnu v RTDB)
+        const maintenanceRef = ref(db, 'settings/maintenance');
+        onValue(maintenanceRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                maintenanceStart = new Date(data.startTime).getTime();
+                maintenanceEnd = new Date(data.endTime).getTime();
+                console.log("Data z DB aktualizována!");
+                updateUIVisibility(); // Přepočítat stav ihned po změně v DB
+            }
+        });
+
+        // SEKUNDOVÝ HLÍDAČ (Pro plynulý progress bar a časovač)
+        setInterval(updateUIVisibility, 1000);
+
+        // PWA instalace
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('btn-install').style.display = 'block';
+        });
+
+        document.getElementById('btn-install').addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+            }
+        });
+
+        window.addEventListener('load', updateUIVisibility);
+    </script>
+</body>
+</html>
