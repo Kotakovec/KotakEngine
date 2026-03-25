@@ -59,25 +59,28 @@
 
     <script>
         // ==========================================
-        //  ⚙️ NASTAVENÍ ÚDRŽBY (Musí sedět s index.html)
+        //  ⚙️ NASTAVENÍ ÚDRŽBY (RRRR-MM-DD HH:MM)
         // ==========================================
-        const zacatek = new Date('2026-03-25T17:00:00').getTime(); 
-        const konec    = new Date('2026-03-26T00:00:00').getTime(); 
+        const zacatekUdrzby = '2026-03-25 17:00'; 
+        const konecUdrzby    = '2026-03-26 00:00'; 
         // ==========================================
 
         const progressFill = document.getElementById('progress-fill');
 
+        const startTime = new Date(zacatekUdrzby.replace(' ', 'T')).getTime();
+        const endTime = new Date(konecUdrzby.replace(' ', 'T')).getTime();
+
         function updateProgress() {
             const now = new Date().getTime();
-            const total = konec - zacatek;
-            const elapsed = now - zacatek;
+            const totalDuration = endTime - startTime;
+            const elapsed = now - startTime;
 
-            let percent = (elapsed / total) * 100;
+            let percent = (elapsed / totalDuration) * 100;
 
             if (percent < 0) percent = 0;
             if (percent >= 100) {
                 percent = 100;
-                // Příkaz pro index.html, aby se obnovil a pustil main.html
+                // Pokud bar dojede, řekne indexu, aby se obnovil
                 window.parent.location.reload(); 
                 clearInterval(timer);
             }
