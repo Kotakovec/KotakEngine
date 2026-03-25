@@ -19,29 +19,42 @@
             font-family: sans-serif; overflow: hidden; 
         }
 
+        /* 1. INSTALAČNÍ OBRAZOVKA */
         #install-screen { 
             display: none; flex-direction: column; align-items: center; 
             justify-content: center; height: 100vh; text-align: center; 
             padding: 30px; box-sizing: border-box; 
         }
-
         .logo-img { 
             width: 120px; height: 120px; border-radius: 25px; 
             margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
             background-image: url('logo.png'); background-size: cover; background-position: center; 
         }
-
         #btn-install { 
             display: none; background: var(--primary); color: #000; 
             border: none; padding: 18px 40px; border-radius: 30px; 
             font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer; 
         }
-
         .instruction-box { 
             background: var(--card-bg); padding: 20px; border-radius: 20px; 
             border: 1px solid #222; max-width: 320px; font-size: 13px; color: #888; 
         }
 
+        /* 2. ÚDRŽBOVÁ OBRAZOVKA */
+        #maintenance-overlay {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; background: #000; color: white; text-align: center;
+        }
+        .m-container { 
+            width: 85%; max-width: 400px; padding: 40px 30px; 
+            border: 1px solid #222; border-radius: 40px; background: #111; 
+        }
+        .m-icon { font-size: 50px; margin-bottom: 20px; }
+        .m-title { color: var(--primary); margin: 0 0 10px 0; font-size: 1.5rem; }
+        .loader-bar { width: 100%; height: 10px; background: #1a1a1a; margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #333; }
+        #progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.5s linear; box-shadow: 0 0 20px rgba(76, 175, 80, 0.5); }
+
+        /* 3. HLAVNÍ APP KONTEJNER */
         #main-app-container { display: none; width: 100%; height: 100%; }
         iframe { width: 100%; height: 100%; border: none; }
     </style>
@@ -52,12 +65,19 @@
         <div class="logo-img"></div>
         <h1 style="margin-bottom: 5px;">KotakEngine</h1>
         <p style="color: #666; margin-top: 0;">Aplikace vyžaduje spuštění z plochy.</p>
-
         <button id="btn-install">INSTALOVAT TEĎ</button>
-
         <div class="instruction-box">
             <b style="color: #fff;">iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
             <b style="color: #fff;">Android:</b> Klepni na tři tečky a zvol "Instalovat aplikaci".
+        </div>
+    </div>
+
+    <div id="maintenance-overlay">
+        <div class="m-container">
+            <div class="m-icon">🛠️</div>
+            <h1 class="m-title">Údržba systému</h1>
+            <p style="color: #888; font-size: 14px;">Právě probíhá aktualizace softwaru.</p>
+            <div class="loader-bar"><div id="progress-fill"></div></div>
         </div>
     </div>
 
@@ -66,43 +86,71 @@
     </div>
 
     <script>
-        // === ⚙️ NASTAVENÍ ČASU ÚDRŽBY (RRRR-MM-DD HH:MM:SS) ===
-        const zacatekUdrzby = new Date('2026-03-25T17:00:00').getTime();
-        const konecUdrzby    = new Date('2026-03-26T00:00:00').getTime();
-        // =====================================================
+        // ==========================================
+        //  ⚙️ NASTAVENÍ ČASU ÚDRŽBY
+        // ==========================================
+        const startUdrzby = new Date('2026-03-25T18:04:00').getTime(); 
+        const konecUdrzby  = new Date('2026-03-25T18:04:10').getTime(); 
+        // ==========================================
 
         let deferredPrompt;
         const installScreen = document.getElementById('install-screen');
+        const maintenanceOverlay = document.getElementById('maintenance-overlay');
         const mainAppContainer = document.getElementById('main-app-container');
         const mainFrame = document.getElementById('main-frame');
         const btnInstall = document.getElementById('btn-install');
+        const fill = document.getElementById('progress-fill');
 
-        function initApp() {
+        function checkStatus() {
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const now = new Date().getTime();
 
-            if (isStandalone) {
-                installScreen.style.display = "none";
-                mainAppContainer.style.display = "block";
+            // Pokud nejsme na ploše, ukaž instalaci
+            if (!isStandalone) {
+                installScreen.style.display = "flex";
+                maintenanceOverlay.style.display = "none";
+                mainAppContainer.style.display = "none";
+                return;
+            }
 
-                // LOGIKA PŘEPÍNÁNÍ: Údržba vs. Samotná aplikace
-                if (now >= zacatekUdrzby && now < konecUdrzby) {
-                    // PRÁVĚ PROBÍHÁ ÚDRŽBA
-                    mainFrame.src = "maintenance.html?v=" + now;
-                    console.log("🛠️ Zobrazen režim údržby.");
-                } else {
-                    // SYSTÉM BĚŽÍ NORMÁLNĚ
-                    mainFrame.src = "main.html?v=" + now;
-                    console.log("🚀 Načten dashboard.");
-                }
+            // Rozhodnutí: Údržba vs Aplikace
+            if (now >= startUdrzby && now < konecUdrzby) {
+                // REŽIM ÚDRŽBY
+                installScreen.style.display = "none";
+                mainAppContainer.style.display = "none";
+                maintenanceOverlay.style.display = "flex";
+                
+                // Resetujeme src, aby se appka načetla znovu po skončení
+                if (mainFrame.src !== "") mainFrame.src = ""; 
+
+                // Progress Bar
+                const total = konecUdrzby - startUdrzby;
+                const elapsed = now - startUdrzby;
+                let percent = (elapsed / total) * 100;
+                fill.style.width = percent + "%";
 
             } else {
-                installScreen.style.display = "flex";
-                mainAppContainer.style.display = "none";
+                // REŽIM APLIKACE
+                installScreen.style.display = "none";
+                maintenanceOverlay.style.display = "none";
+                mainAppContainer.style.display = "block";
+
+                // Načtení main.html (pokud ještě není v iframu)
+                if (!mainFrame.src.includes("main.html")) {
+                    mainFrame.src = "main.html?v=" + now;
+                }
             }
         }
 
-        // Instalace (Android)
+        // Hlídač času - běží každou sekundu
+        setInterval(checkStatus, 1000);
+
+        // Registrace Service Workeru
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
+
+        // Android Instalace
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -117,8 +165,8 @@
             }
         });
 
-        // Kontrola hned po načtení index.html
-        window.addEventListener('load', initApp);
+        // První kontrola při startu
+        window.addEventListener('load', checkStatus);
     </script>
 </body>
 </html>
