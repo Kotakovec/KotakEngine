@@ -8,22 +8,25 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #4caf50; --bg: #000; --card-bg: #121212; }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .card { background: var(--card-bg); border: 1px solid #333; border-radius: 30px; padding: 30px; width: 90%; max-width: 350px; text-align: center; }
-        .btn { background: var(--primary); color: #000; text-decoration: none; padding: 18px; border-radius: 40px; display: block; font-weight: bold; margin-top: 20px; }
-        #status { color: #888; margin-top: 10px; }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .card { background: var(--card-bg); border: 1px solid #333; border-radius: 30px; padding: 35px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .btn { background: var(--primary); color: #000; text-decoration: none; padding: 18px; border-radius: 40px; display: block; font-weight: bold; margin-top: 25px; font-size: 1.1rem; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.95); }
+        #preview-img { max-width: 100%; border-radius: 15px; margin-top: 15px; border: 1px solid #333; display: none; }
+        #loader { color: #666; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="loader">Čekám na soubor z KotakEngine...</div>
+        <div id="loader">Hledám soubor v KotakEngine...</div>
+        
         <div id="content" style="display:none">
-            <h2 style="color:var(--primary)">Soubor přijat!</h2>
-            <div id="name" style="font-weight:bold; margin-bottom: 5px;"></div>
-            <div id="size" style="color:#888; font-size:12px"></div>
+            <h2 style="color:var(--primary); margin-top: 0;">Soubor přijat!</h2>
+            <div id="name" style="font-weight:bold; word-break: break-all;"></div>
+            <div id="size" style="color:#888; font-size:12px; margin-top: 5px;"></div>
+            <img id="preview-img" src="">
             <a id="link" href="" download class="btn">STÁHNOUT</a>
         </div>
-        <div id="status"></div>
     </div>
 
     <script>
@@ -42,18 +45,26 @@
             db.ref('shares/' + id).on('value', (snap) => {
                 const data = snap.val();
                 if (data && data.isActive && Date.now() < data.expiresAt) {
-                    document.getElementById('loader').style.display="none";
-                    document.getElementById('content').style.display="block";
+                    document.getElementById('loader').style.display = "none";
+                    document.getElementById('content').style.display = "block";
                     document.getElementById('name').innerText = data.fileName;
                     document.getElementById('size').innerText = (data.fileSize/1024).toFixed(1) + " KB";
-                    document.getElementById('link').href = data.fileUrl;
+                    
+                    const link = document.getElementById('link');
+                    link.href = data.fileData; // Data jsou přímo v proměnné
+                    link.download = data.fileName;
+
+                    if (data.fileType && data.fileType.startsWith('image/')) {
+                        const img = document.getElementById('preview-img');
+                        img.src = data.fileData;
+                        img.style.display = "block";
+                    }
                 } else {
-                    document.getElementById('content').style.display="none";
                     document.getElementById('loader').innerText = "Žádný aktivní soubor k dispozici.";
                 }
             });
         } else {
-            document.getElementById('loader').innerText = "Chybné URL (nenalezeno ID).";
+            document.getElementById('loader').innerText = "Neplatný odkaz (chybí ID).";
         }
     </script>
 </body>
