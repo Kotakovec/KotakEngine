@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KotakEngine - Přijmout</title>
+    <style>
+        :root {
+            --primary: #4caf50;
+            --bg: #000;
+            --card-bg: rgba(22, 22, 22, 0.9);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        h2 { color: var(--primary); margin: 0; }
+
+        /* PREVIEW SEKCE */
+        .preview-box {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            border-radius: 25px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #file-icon { font-size: 50px; }
+
+        #preview-img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 15px;
+            display: none; /* Ukáže se jen u obrázků */
+            border: 1px solid #444;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .file-name { font-weight: bold; font-size: 1.2rem; word-break: break-all; }
+        .file-size { color: #888; font-size: 0.9rem; }
+
+        /* TLAČÍTKO STÁHNOUT (KAPSLE) */
+        .btn-download {
+            background: var(--primary);
+            color: black;
+            border: none;
+            padding: 18px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.2);
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.1s;
+        }
+
+        .btn-download:active { transform: scale(0.96); }
+
+        /* Stav "Nic se nesdílí" */
+        #no-file { display: none; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="main-container">
+        <h2>Soubor přijat!</h2>
+
+        <div class="preview-box">
+            <div id="file-icon">📦</div>
+            <img id="preview-img" src="" alt="Náhled souboru">
+            
+            <div class="file-info">
+                <span id="display-name" class="file-name">Načítání...</span>
+                <span id="display-size" class="file-size">--- KB</span>
+            </div>
+        </div>
+
+        <a id="download-link" href="#" download class="btn-download">STÁHNOUT SOUBOR</a>
+    </div>
+
+    <div id="no-file">
+        <p>Momentálně se žádný soubor nesdílí.</p>
+    </div>
+
+    <script>
+        // Simulace dat (v reálu by si je to vytáhlo z tvého serveru/Firebase podle ID v URL)
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const shareId = params.get('id');
+
+            // Tady bys udělal fetch na server: getSharedFile(shareId)
+            // Pro teď to nasimulujeme:
+            const mockData = {
+                name: "kotak_zprava.jpg",
+                size: "1.2 MB",
+                type: "image/jpeg",
+                url: "https://via.placeholder.com/400x300.png?text=KotakEngine+Preview" // Ukázkový obrázek
+            };
+
+            if (mockData) {
+                document.getElementById('display-name').innerText = mockData.name;
+                document.getElementById('display-size').innerText = mockData.size;
+                
+                const img = document.getElementById('preview-img');
+                const icon = document.getElementById('file-icon');
+
+                if (mockData.type.startsWith('image/')) {
+                    img.src = mockData.url;
+                    img.style.display = "block";
+                    icon.style.display = "none";
+                }
+
+                const dlLink = document.getElementById('download-link');
+                dlLink.href = mockData.url;
+            } else {
+                document.getElementById('main-container').style.display = "none";
+                document.getElementById('no-file').style.display = "block";
+            }
+        };
+    </script>
+</body>
+</html>
