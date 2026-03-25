@@ -26,54 +26,60 @@
             pointer-events: none; 
         }
 
-        /* Kontejner pro plynulý posun obrazovek */
         #app-wrapper {
             display: flex;
-            width: 200vw; /* Dvě obrazovky vedle sebe */
+            width: 200vw;
             height: 100vh;
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 5;
             position: relative;
         }
 
-        /* Režim, kdy je vidět finta */
-        #app-wrapper.slide-left {
-            transform: translateX(-100vw);
-        }
+        #app-wrapper.slide-left { transform: translateX(-100vw); }
 
-        /* Společný styl pro obě "stránky" */
         .page {
             width: 100vw;
             height: 100vh;
             flex-shrink: 0;
             box-sizing: border-box;
-        }
-
-        /* HLAVNÍ MENU */
-        #main-menu {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 40px 20px;
+        }
+
+        #main-menu {
+            padding: 40px 20px 20px 20px;
             background: rgba(0, 0, 0, 0.4); 
-            overflow-y: auto;
         }
 
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             color: #4caf50;
             text-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+            text-align: center;
         }
 
-        .grid {
+        /* Horní část s velkými tlačítky */
+        .top-section {
+            flex-grow: 1; /* Odtlačí zbytek dolů */
             display: flex;
             flex-direction: column;
             gap: 15px;
             width: 100%;
             max-width: 400px;
+            margin: 0 auto;
         }
 
+        /* Spodní část s tlačítky vedle sebe */
+        .bottom-section {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 10px auto;
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Společný styl kapsle */
         .finta-card {
             background: rgba(22, 22, 22, 0.85); 
             backdrop-filter: blur(5px); 
@@ -82,43 +88,47 @@
             padding: 15px 25px;
             border-radius: 40px;
             cursor: pointer;
-            transition: transform 0.1s, background 0.2s;
+            transition: transform 0.1s, border-color 0.2s;
             border: 1px solid rgba(76, 175, 80, 0.3);
             position: relative;
+            min-height: 60px;
+            box-sizing: border-box;
         }
 
         .finta-card:active {
             transform: scale(0.97);
-            background: rgba(76, 175, 80, 0.2);
+            border-color: #ff4757;
+        }
+
+        /* Malé kapsle dole */
+        .small-card {
+            flex: 1;
+            padding: 12px 10px;
+            border-radius: 30px;
+            min-height: 55px;
         }
 
         .finta-card .emoji {
-            font-size: 24px;
-            position: absolute;
-            left: 25px;
+            font-size: 22px;
+            margin-right: 12px;
         }
 
         .finta-card h3 {
             margin: 0;
-            font-size: 1.1rem;
+            font-size: 1rem;
             width: 100%;
             text-align: center;
             font-weight: 500;
         }
 
-        /* STRÁNKA S WEBVIEW */
-        #webview-page {
-            background: #000;
-            position: relative;
+        /* Úprava textu pro malé kapsle, aby se tam vešel */
+        .small-card h3 {
+            font-size: 0.85rem;
         }
 
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        #webview-page { background: #000; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
 
-        /* TLAČÍTKO ZPĚT */
         #back-button {
             position: fixed;
             top: 15px;
@@ -132,36 +142,25 @@
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            cursor: pointer;
             z-index: 999;
             transition: left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: none;
-            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
         }
-
         #back-button.visible { left: 15px; }
-
-        .footer {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            font-size: 12px;
-            color: rgba(76, 175, 80, 0.7);
-            z-index: 6;
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
-
-    <div class="footer">Created by Koťák</div>
 
     <button id="back-button" onclick="zpetDoMenu()">&#10094;</button>
 
     <div id="app-wrapper">
         <div class="page" id="main-menu">
             <h1>KotakEngine</h1>
-            <div class="grid" id="tlacitka-grid">
+
+            <div class="top-section" id="top-grid">
+                </div>
+
+            <div class="bottom-section" id="bottom-grid">
                 </div>
         </div>
 
@@ -171,17 +170,38 @@
     </div>
 
     <script>
-        const seznamFint = [
+        // Data pro horní část (3x stejné dle zadání)
+        const horniFinty = [
             { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" },
+            { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" },
+            { nazev: "File Encrypter", emoji: "🔐", soubor: "file.html" }
         ];
 
-        const grid = document.getElementById('tlacitka-grid');
-        seznamFint.forEach(finta => {
+        // Data pro spodní část
+        const spodniFinty = [
+            { nazev: "Odeslat", emoji: "📡", soubor: "send.html" },
+            { nazev: "Nastavení", emoji: "⚙️", soubor: "settings.html" }
+        ];
+
+        const topGrid = document.getElementById('top-grid');
+        const bottomGrid = document.getElementById('bottom-grid');
+
+        // Vykreslení horních velkých tlačítek
+        horniFinty.forEach(finta => {
             const card = document.createElement('div');
             card.className = 'finta-card';
             card.onclick = () => otevriAplikaci(finta.soubor);
             card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
-            grid.appendChild(card);
+            topGrid.appendChild(card);
+        });
+
+        // Vykreslení spodních tlačítek vedle sebe
+        spodniFinty.forEach(finta => {
+            const card = document.createElement('div');
+            card.className = 'finta-card small-card';
+            card.onclick = () => otevriAplikaci(finta.soubor);
+            card.innerHTML = `<span class="emoji">${finta.emoji}</span><h3>${finta.nazev}</h3>`;
+            bottomGrid.appendChild(card);
         });
 
         const appWrapper = document.getElementById('app-wrapper');
@@ -189,21 +209,18 @@
         const backButton = document.getElementById('back-button');
 
         function otevriAplikaci(stranka) {
-            appFrame.src = stranka;
-            // Posuneme celou aplikaci doleva
+            appFrame.src = stranka + (window.location.search || "");
             appWrapper.classList.add('slide-left');
-            // Zobrazíme tlačítko zpět
             setTimeout(() => { backButton.classList.add('visible'); }, 300);
         }
 
         function zpetDoMenu() {
             backButton.classList.remove('visible');
             appWrapper.classList.remove('slide-left');
-            // Vymažeme iframe až po animaci, aby to neprobliklo
             setTimeout(() => { appFrame.src = ""; }, 500);
         }
 
-        /* --- PŮVODNÍ ANIMACE POZADÍ --- */
+        /* --- ANIMACE POZADÍ (Zůstává stejná) --- */
         var App = {};
         App.setup = function() {
             var canvas = document.createElement('canvas');
