@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KotakEngine - Nastavení</title>
+    <style>
+        :root { --primary: #4caf50; --bg: #000; --card-bg: #111; --error: #ff4757; --disabled: #222; }
+        body { 
+            margin: 0; background: var(--bg); color: #fff; 
+            font-family: sans-serif; display: flex; flex-direction: column; 
+            align-items: center; min-height: 100vh; 
+        }
+        
+        .back-nav { 
+            position: fixed; top: 20px; left: 20px; 
+            background: var(--primary); width: 45px; height: 45px; 
+            border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; font-size: 20px; cursor: pointer; 
+            border: none; color: white; z-index: 100;
+        }
+
+        .container { width: 90%; max-width: 400px; padding: 80px 0 20px 0; text-align: center; }
+
+        .section {
+            background: var(--card-bg); border: 1px solid #222;
+            border-radius: 30px; padding: 25px; margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: 0.3s;
+        }
+
+        h2 { color: var(--primary); margin: 0 0 10px 0; font-size: 1.3rem; }
+        p { color: #888; font-size: 13px; line-height: 1.5; margin-bottom: 15px; }
+
+        /* Tlačítka */
+        .btn {
+            color: #000; border: none; padding: 18px; border-radius: 40px; 
+            font-weight: bold; width: 100%; cursor: pointer; font-size: 1rem;
+            transition: 0.2s; margin-bottom: 10px;
+        }
+        
+        .btn-id { background: #fff; } /* Bílé pro vytvoření ID */
+        .btn-nfc { background: var(--primary); }
+        
+        /* Styl pro vypnuté tlačítko */
+        .btn:disabled { 
+            background: var(--disabled) !important; 
+            color: #444 !important; 
+            cursor: not-allowed; 
+            transform: scale(1) !important;
+        }
+
+        #nfc-status { margin-top: 15px; font-size: 13px; font-weight: bold; min-height: 20px; }
+
+        .id-display {
+            background: #000; border: 1px dashed #444;
+            padding: 12px; border-radius: 15px; color: var(--primary);
+            font-family: monospace; font-size: 14px; margin-top: 10px;
+            display: none; /* Schované, dokud ID neexistuje */
+        }
+    </style>
+</head>
+<body>
+
+    <button class="back-nav" onclick="history.back()">&#10094;</button>
+
+    <div class="container">
+        
+        <div class="section">
+            <h2>1. Moje Identita</h2>
+            <p>Nejdříve si vygeneruj unikátní Kotak ID. Bez něj nemůžeš vytvářet nálepky.</p>
+            <button id="btn-create-id" class="btn btn-id" onclick="createId()">VYTVOŘIT MOJE ID</button>
+            <div id="id-box" class="id-display"></div>
+        </div>
+
+        <div id="nfc-section" class="section" style="opacity: 0.4;">
+            <h2>2. NFC Tag</h2>
+            <p>Zapiš své ID na fyzickou nálepku pro rychlé sdílení.</p>
+            <button id="btn-write-nfc" class="btn btn-nfc" onclick="writeNfcTag()" disabled>ZAPISOVAT NA NÁLEPKU</button>
+            <div id="nfc-status"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const btnCreateId = document.getElementById('btn-create-id');
+        const btnWriteNfc = document.getElementById('btn-write-nfc');
+        const idBox = document.getElementById('id-box');
+        const nfcSection = document.getElementById('nfc-section');
+        const nfcStatus = document.getElementById('nfc-status');
+
+        // Funkce pro kontrolu, jestli už ID existuje
+        function checkStatus() {
+            const sid = localStorage.getItem('kotak_sender_id');
+            if (sid) {
+                // Pokud ID existuje:
+                idBox.innerText = sid;
+                idBox.style.display = "block";
+                btnCreateId.innerText = "ID VYGENEROVÁNO";
+                btnCreateId.disabled = true;
+                
+                // Odemkneme NFC sekci
+                nfcSection.style.opacity = "1";
+                btnWriteNfc.disabled = false;
+            }
+        }
+
+        // Vytvoření nového ID
+        function createId() {
+            const newId = 'sid_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('kotak_sender_id', newId);
+            checkStatus();
+        }
+
+        // Zápis na NFC
+        async function writeNfcTag() {
+            const sid = localStorage.getItem('kotak_sender_id');
+            
+            if (!('NDEFReader' in window)) {
+                nfcStatus.innerText = "❌ NFC není v prohlížeči podporováno.";
+                nfcStatus.style.color = "#ff4757";
+                return;
+            }
+
+            try {
+                const finalUrl = `https://kotakovec.github.io/kotakengine/accept.html?id=${sid}`;
+                nfcStatus.innerText = "⏳ Přilož telefon k nálepce...";
+                nfcStatus.style.color = "#4caf50";
+
+                const ndef = new NDEFReader();
+                await ndef.write({
+                    records: [{ recordType: "url", data: finalUrl }]
+                });
+
+                nfcStatus.innerText = "✅ NÁLEPKA ÚSPĚŠNĚ AKTIVOVÁNA!";
+                if (navigator.vibrate) navigator.vibrate(200);
+            } catch (error) {
+                nfcStatus.innerText = "❌ Chyba: " + error.message;
+                nfcStatus.style.color = "#ff4757";
+            }
+        }
+
+        // Spustit kontrolu při načtení stránky
+        checkStatus();
+    </script>
+</body>
+</html>
