@@ -13,79 +13,43 @@
 
     <style>
         :root {
-            --primary: #ff4757;
+            --primary: #4caf50; /* Změnil jsem na tvou zelenou, ať to ladí */
             --bg: #121212;
             --card-bg: #1e1e1e;
         }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            background-color: var(--bg);
-            color: white;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            overflow: hidden;
+            margin: 0; padding: 0; height: 100%;
+            background-color: var(--bg); color: white;
+            font-family: sans-serif; overflow: hidden;
         }
 
-        /* --- INSTALAČNÍ BRÁNA (Zobrazí se v prohlížeči) --- */
         #install-screen {
-            display: none; /* Zapne JS pokud není standalone */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
-            padding: 30px;
-            box-sizing: border-box;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            height: 100vh; text-align: center; padding: 30px; box-sizing: border-box;
         }
 
         .logo-img {
-            width: 120px;
-            height: 120px;
-            border-radius: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            background-image: url('logo.png');
-            background-size: cover;
-            background-position: center;
+            width: 120px; height: 120px; border-radius: 25px;
+            margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            background-image: url('logo.png'); background-size: cover; background-position: center;
         }
 
         #btn-install {
-            display: none;
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 18px 40px;
-            border-radius: 30px;
-            font-weight: bold;
-            font-size: 16px;
-            margin: 20px 0;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.3);
+            display: none; background: var(--primary); color: #000;
+            border: none; padding: 18px 40px; border-radius: 30px;
+            font-weight: bold; font-size: 16px; margin: 20px 0; cursor: pointer;
         }
 
         .instruction-box {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid #333;
-            max-width: 300px;
-            font-size: 14px;
+            background: var(--card-bg); padding: 20px;
+            border-radius: 15px; border: 1px solid #333;
+            max-width: 300px; font-size: 14px; color: #aaa;
         }
 
-        /* --- IFRAME PRO MAIN.HTML (Zobrazí se v PWA) --- */
-        #main-app-container {
-            display: none; /* Zapne JS pokud je standalone */
-            width: 100%;
-            height: 100%;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        #main-app-container { display: none; width: 100%; height: 100%; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
@@ -98,7 +62,7 @@
         <button id="btn-install">INSTALOVAT TEĎ</button>
 
         <div class="instruction-box">
-            <b>iPhone/iPad:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
+            <b>iPhone:</b> Klepni na ikonu sdílení a zvol "Přidat na plochu".<br><br>
             <b>Android:</b> Klepni na tlačítko výše nebo na tři tečky v prohlížeči.
         </div>
     </div>
@@ -115,22 +79,19 @@
         const btnInstall = document.getElementById('btn-install');
 
         function checkStatus() {
-            // Zjistíme, jestli uživatel už spustil appku z plochy
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             
             if (isStandalone) {
-                // JE NA PLOŠE: Schováme bránu a načteme main.html do iFramu
                 installScreen.style.display = "none";
                 mainAppContainer.style.display = "block";
-                mainFrame.src = "/main.html"; 
+                // OPRAVA: Používáme relativní cestu bez lomítka na začátku
+                mainFrame.src = "main.html"; 
             } else {
-                // JE V PROHLÍŽEČI: Ukážeme bránu s návodem
                 installScreen.style.display = "flex";
                 mainAppContainer.style.display = "none";
             }
         }
 
-        // Android logika pro instalační tlačítko
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -145,7 +106,6 @@
             }
         });
 
-        // Spustit kontrolu hned po načtení
         window.addEventListener('load', checkStatus);
     </script>
 </body>
