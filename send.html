@@ -10,16 +10,15 @@
         :root { --primary: #4caf50; --error: #ff4757; --bg: #000; --card-bg: #111; }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .container { width: 90%; max-width: 400px; padding: 40px 0; display: flex; flex-direction: column; gap: 20px; }
-        .upload-area { background: var(--card-bg); border: 2px dashed #333; border-radius: 30px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; }
-        .upload-area:active { transform: scale(0.98); border-color: var(--primary); }
-        #preview-zone { display: none; background: #1a1a1a; border-radius: 25px; padding: 20px; border: 1px solid #444; text-align: center; margin-top: 10px; }
-        #preview-img { max-width: 100%; max-height: 150px; border-radius: 15px; margin-bottom: 10px; display: none; }
-        .btn-share { background: var(--primary); color: #000; border: none; padding: 18px; border-radius: 40px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1rem; margin-top: 10px; }
+        .upload-area { background: var(--card-bg); border: 2px dashed #333; border-radius: 30px; padding: 40px 20px; text-align: center; cursor: pointer; }
+        #preview-zone { display: none; background: #1a1a1a; border-radius: 25px; padding: 20px; border: 1px solid #444; text-align: center; }
+        #preview-img { max-width: 100%; max-height: 150px; border-radius: 10px; margin-bottom: 10px; display: none; }
+        .btn-share { background: var(--primary); color: #000; border: none; padding: 18px; border-radius: 40px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1rem; }
         .btn-share:disabled { background: #222; color: #555; }
         #stop-button { position: fixed; top: 20px; left: -250px; background: var(--error); color: #fff; border: none; padding: 12px 25px; border-radius: 30px; font-weight: bold; transition: 0.4s; z-index: 1000; }
         #stop-button.visible { left: 20px; }
+        #status { text-align: center; font-size: 14px; margin-top: 10px; min-height: 20px; }
         input[type="file"] { display: none; }
-        #status { text-align: center; font-size: 14px; min-height: 20px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -27,13 +26,12 @@
     <button id="stop-button" onclick="stopSharing()">&#10094; ZRUŠIT SDÍLENÍ</button>
 
     <div class="container">
-        <h2 style="color: var(--primary); text-align: center; margin-bottom: 5px;">Kotak Send</h2>
-        <div id="user-id-tag" style="font-size: 11px; color: #555; text-align: center; margin-bottom: 20px;"></div>
+        <h2 style="color: var(--primary); text-align: center;">Kotak Send</h2>
+        <div id="user-id-tag" style="font-size: 10px; color: #444; text-align: center; margin-bottom: 20px;"></div>
 
         <div class="upload-area" onclick="document.getElementById('file-input').click()">
-            <div style="font-size: 50px; margin-bottom: 15px;">☁️</div>
-            <p id="label-text" style="margin:0; font-weight:bold;">Vybrat soubor</p>
-            <p style="font-size: 12px; color: #666; margin-top: 5px;">Max. 100 MB • Zdarma</p>
+            <div style="font-size: 40px;">📂</div>
+            <p style="margin:0; font-weight:bold;">Vybrat soubor</p>
         </div>
         <input type="file" id="file-input">
 
@@ -58,79 +56,72 @@
 
         let senderId = localStorage.getItem('kotak_sender_id') || ('sid_' + Math.random().toString(36).substr(2, 9));
         localStorage.setItem('kotak_sender_id', senderId);
-        document.getElementById('user-id-tag').innerText = "ID ZAŘÍZENÍ: " + senderId;
+        document.getElementById('user-id-tag').innerText = "MOJE ID: " + senderId;
 
         const fileInput = document.getElementById('file-input');
         const btnSubmit = document.getElementById('btn-submit');
         const status = document.getElementById('status');
         let selectedFile = null;
+        let fileBase64 = null;
 
         fileInput.onchange = (e) => {
             selectedFile = e.target.files[0];
             if (selectedFile) {
-                document.getElementById('preview-zone').style.display = "block";
-                document.getElementById('file-name').innerText = selectedFile.name;
-                document.getElementById('file-size').innerText = (selectedFile.size/1024).toFixed(1) + " KB";
-                
-                if (selectedFile.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => { 
-                        const img = document.getElementById('preview-img');
-                        img.src = ev.target.result; 
-                        img.style.display="block"; 
-                    };
-                    reader.readAsDataURL(selectedFile);
-                } else {
-                    document.getElementById('preview-img').style.display="none";
+                // Limit pro databázi je cca 8MB, raději dáme 5MB pro stabilitu
+                if (selectedFile.size > 5 * 1024 * 1024) {
+                    alert("Soubor je moc velký pro přímý přenos (max 5MB).");
+                    return;
                 }
-                btnSubmit.disabled = false;
-                status.innerText = "Soubor připraven.";
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    fileBase64 = ev.target.result;
+                    document.getElementById('preview-zone').style.display = "block";
+                    document.getElementById('file-name').innerText = selectedFile.name;
+                    document.getElementById('file-size').innerText = (selectedFile.size/1024).toFixed(1) + " KB";
+                    
+                    if (selectedFile.type.startsWith('image/')) {
+                        document.getElementById('preview-img').src = fileBase64;
+                        document.getElementById('preview-img').style.display = "block";
+                    } else {
+                        document.getElementById('preview-img').style.display = "none";
+                    }
+                    btnSubmit.disabled = false;
+                    status.innerText = "Soubor připraven.";
+                };
+                reader.readAsDataURL(selectedFile);
             }
         };
 
         btnSubmit.onclick = async () => {
             btnSubmit.disabled = true;
-            status.innerText = "Nahrávám do Kotak Cloudu...";
+            status.innerText = "Ukládám do databáze...";
             status.style.color = "#4caf50";
 
-            const formData = new FormData();
-            formData.append("file", selectedFile);
-
             try {
-                // Nahrávání přes File.io (mnohem stabilnější pro PWA)
-                const response = await fetch("https://file.io/?expires=1h", {
-                    method: "POST",
-                    body: formData
+                // Zapíšeme všechno přímo do Realtime Databáze
+                await db.ref('shares/' + senderId).set({
+                    name: selectedFile.name,
+                    data: fileBase64, // Soubor jako text
+                    size: selectedFile.size,
+                    type: selectedFile.type,
+                    expires: Date.now() + 3600000,
+                    active: true
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
-                    // Zápis odkazu do Firebase
-                    await db.ref('shares/' + senderId).set({
-                        fileName: selectedFile.name,
-                        fileUrl: result.link, // Odkaz od file.io
-                        fileSize: selectedFile.size,
-                        expiresAt: Date.now() + 3600000,
-                        isActive: true
-                    });
-
-                    status.innerText = "SDÍLENÍ AKTIVNÍ";
-                    document.getElementById('stop-button').classList.add('visible');
-                } else {
-                    throw new Error("Upload selhal");
-                }
+                status.innerText = "SDÍLENÍ AKTIVNÍ";
+                document.getElementById('stop-button').classList.add('visible');
             } catch (err) {
                 console.error(err);
-                status.innerText = "Chyba při odesílání!";
+                status.innerText = "Chyba databáze! Zkus menší soubor.";
                 status.style.color = "#ff4757";
                 btnSubmit.disabled = false;
             }
         };
 
-        async function stopSharing() {
-            if(confirm("Ukončit sdílení souboru?")) {
-                await db.ref('shares/' + senderId).remove();
+        function stopSharing() {
+            if(confirm("Ukončit sdílení?")) {
+                db.ref('shares/' + senderId).remove();
                 location.reload();
             }
         }
